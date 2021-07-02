@@ -11,6 +11,12 @@ Then, update submodules after cloning:
 
 After loading the submodule, you could edit the files and update them. Upon pushing, you could then update all plotting functions across multiple application areas. 
 
+As an example, you could import the AppSci plot tools by including the following `import` in Python: \
+```
+import precursor_DFT_descriptors.scripts.AppSciTools.plot_tools as plot_tools
+```
+
+
 # Description of files
 - `plot_tools.py`:
 	This code contains useful plotting tools using `matplotlib` module to get the correct figure dimensions
