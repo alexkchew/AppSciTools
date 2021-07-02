@@ -3,7 +3,7 @@ This repository stores useful plotting tools and functions that could help an Ap
 This is not intended to be a module of it's own; rather, it is iteratively loaded as a submodule for each application. By iteratively loading these tools as submodules, we avoid the dependency of a separate module when creating a new application. As a result, sharing applications with all the codes embedded correctly is much easier; rather than requiring multiple dependencies from different directories. 
 
 # Usage
-You could add these tools as a submodule to an application that you are working on. To add as a submodule:__
+You could add these tools as a submodule to an application that you are working on. To add as a submodule: \
 `git submodule add git@github.com:alexkchew/AppSciTools.git scripts/AppSciTools`
 
 Then, update submodules after cloning:
