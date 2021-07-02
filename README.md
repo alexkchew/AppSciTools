@@ -14,6 +14,8 @@ After loading the submodule, you could edit the files and update them. Upon push
 As an example, you could import the AppSci plot tools by including the following `import` in Python: \
 ```
 import precursor_DFT_descriptors.scripts.AppSciTools.plot_tools as plot_tools
+# Setting mpl defaults
+plot_tools.set_mpl_defaults()
 ```
 
 
