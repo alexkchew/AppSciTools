@@ -10,3 +10,6 @@ You could add these tools as a submodule to an application that you are working 
 Then, update submodules after cloning:
 `git submodule update --init`
 
+# Description of files
+- `plot_tools.py`:
+	This code contains useful plotting tools using `matplotlib` module to get the correct figure dimensions
