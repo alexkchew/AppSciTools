@@ -9,6 +9,22 @@ Created on: Tue Jun 15 12:52:38 2021
 Author: Alex K. Chew (alex.chew@schrodinger.com)
 
 Copyright Schrodinger, LLC. All rights reserved.
+
+Global variables:
+    FIGURE_SIZES_DICT_CM:
+        Defalt figure sizes
+
+Functions:
+    create_horizontal_bar:
+        creates horizontal bar plots
+    set_mpl_defaults:
+        sets matplotlib defaults
+    cm2inch:
+        converts centimeters to inches
+    store_figure:
+        function that sotres the figure
+    create_fig_based_on_cm:
+        creates figures based on centimer sizes
 """
 # Importing tools
 import matplotlib.pyplot as plt
@@ -106,3 +122,53 @@ def create_fig_based_on_cm(fig_size_cm = (16.8, 16.8)):
     ax = fig.add_subplot(111)
     return fig, ax
 
+
+# Function to create bar plot
+def create_horizontal_bar(labels,
+                          values,
+                          width = 0.5,
+                          xlabel = "Value",
+                          fig_size_cm = FIGURE_SIZES_DICT_CM['1_col']):
+    """
+    This function generates a horizontal bar plot
+
+    Parameters
+    ----------
+    labels : np.array
+        Labels that you want to include
+    values: np.array
+        values that you want to plot as a horizontal bar plot
+    width: float, optional
+        width of the bar plot. Default is 0.5
+    xlabel: str, optional
+        label for the x axis. Default is "Value".
+    fig_size_cm : tuple size 2, optional
+        Figure size in centimeters. The default is plot_tools.FIGURE_SIZES_DICT_CM['1_col'].
+        
+    Returns
+    -------
+    fig, ax: obj
+        figure and axis object
+
+    """
+    
+    # Generating plot
+    fig, ax = create_fig_based_on_cm(fig_size_cm = fig_size_cm)
+    
+    # Adding bar plot
+    ax.barh(labels, 
+            values, 
+            width, 
+            color ='k',
+            capsize=2, )
+    
+    # Reverse axis
+    ax.invert_yaxis()  # labels read top-to-bottom
+    
+    # Setting label
+    ax.set_xlabel(xlabel)
+    
+    # Tight layout
+    fig.tight_layout()
+    
+    return fig, ax
