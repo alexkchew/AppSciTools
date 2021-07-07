@@ -22,4 +22,5 @@ plot_tools.set_mpl_defaults()
 # Description of files
 - `plot_tools.py`:
 	This code contains useful plotting tools using `matplotlib` module to get the correct figure dimensions
-
+- `filtration.py`
+	This code contains filtration tools for scrrening the data
