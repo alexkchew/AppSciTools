@@ -233,7 +233,8 @@ def strip_df_index(df,
     return df_clean
 
 # Function to generate X_df from descriptor list
-def generate_X_df_from_descriptor_list(descriptor_list):
+def generate_X_df_from_descriptor_list(descriptor_list,
+                                       default_csv_paths):
     """
     This function generates the combined dataframe from descriptor list. 
     This assumes that all descriptors have been generated with the same 
@@ -243,6 +244,8 @@ def generate_X_df_from_descriptor_list(descriptor_list):
     ----------
     descriptor_list : list
         List of descriptors that are desired.
+    default_csv_paths: dict
+        default csv path dictionary
 
     Returns
     -------
@@ -251,7 +254,8 @@ def generate_X_df_from_descriptor_list(descriptor_list):
     """
     
     # Getting descriptors
-    descriptor_df_dict = load_multiple_descriptor_data(descriptor_list = descriptor_list)
+    descriptor_df_dict = load_multiple_descriptor_data(default_csv_paths = default_csv_paths,
+                                                       descriptor_list = descriptor_list)
 
     # Cleaning each dictionary
     descriptor_df_clean = {each_key: strip_df_index(descriptor_df_dict[each_key]) 
@@ -267,6 +271,8 @@ def generate_X_df_from_descriptor_list(descriptor_list):
 def main_generate_qspr_models_CV(descriptor_keys_to_use,
                                  descriptor_dict,
                                  output_property_list,
+                                 default_csv_paths,
+                                 default_index_cols = DEFAULT_INDEX_COLS,
                                  want_normalize = True,
                                  model_type_list = ['RF']):
     """
@@ -309,7 +315,8 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
             descriptor_list = descriptor_dict[descriptor_df_key]['descriptor_list']
             
             # Generating combined dataframe
-            X_df = generate_X_df_from_descriptor_list(descriptor_list = descriptor_list)
+            X_df = generate_X_df_from_descriptor_list(descriptor_list = descriptor_list,
+                                                      default_csv_paths = default_csv_paths,)
             
             # Re-normalize all columns in the X array
             if want_normalize is True:
@@ -320,15 +327,15 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
                 X = X_df.values
             
             # Getting y properties
-            csv_data = load_property_data(csv_data_path = DEFAULT_CSV_PATHS["raw_data"],
-                                          keep_list = DEFAULT_INDEX_COLS + [property_label])
+            csv_data = load_property_data(csv_data_path = default_csv_paths["raw_data"],
+                                          keep_list = default_index_cols + [property_label])
             
             # Getting location at which csv data exists. True if value exists
             csv_data_exists = ~csv_data[property_label].isnull() # list of True/False
             
             # Defining y array
             y_array = csv_data[property_label][csv_data_exists].values
-            labels_array = csv_data[DEFAULT_INDEX_COLS[0]][csv_data_exists].values
+            labels_array = csv_data[default_index_cols[0]][csv_data_exists].values
             
             # Getting X for area of existing
             X_df = X_df[csv_data_exists]
