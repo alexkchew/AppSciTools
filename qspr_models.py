@@ -29,6 +29,9 @@ from sklearn.linear_model import LinearRegression, Lasso
 from sklearn.svm import SVR
 from sklearn.pipeline import make_pipeline
 
+# Importing relative stats
+from .core.stats import get_stats
+
 # Setting random seed
 np.random.seed(0)
 
@@ -199,5 +202,167 @@ def predict_for_KFolds(model_type,
         return predict_df, model_list
     else:
         return predict_df
+
+# Function to strip title and etc to get numerical descriptors only
+def strip_df_index(df,
+                   col2remove = DEFAULT_INDEX_COLS):
+    """
+    This function strips the dataframe from the index information. 
+
+    Parameters
+    ----------
+    df : dataframe
+        pandas dataframe containing descriptor information. 
+    col2remove: list]
+        list of columns to remove from the dataframe.
+    Returns
+    -------
+    df_clean: dataframe]
+        pandas dataframe without any "Title" or index information
+    """
+    # Dropping the columns
+    df_clean = df.drop(columns = col2remove,
+                       errors='ignore')
+    
+    return df_clean
+
+# Function to generate X_df from descriptor list
+def generate_X_df_from_descriptor_list(descriptor_list):
+    """
+    This function generates the combined dataframe from descriptor list. 
+    This assumes that all descriptors have been generated with the same 
+    indexes. We may need to check this in the future!
+
+    Parameters
+    ----------
+    descriptor_list : list
+        List of descriptors that are desired.
+
+    Returns
+    -------
+    X_df: [df]
+        dataframe containing all descriptors
+    """
+    
+    # Getting descriptors
+    descriptor_df_dict = load_multiple_descriptor_data(descriptor_list = descriptor_list)
+
+    # Cleaning each dictionary
+    descriptor_df_clean = {each_key: strip_df_index(descriptor_df_dict[each_key]) 
+                                              for each_key in descriptor_df_dict}
+    
+    # Combining dataframes
+    X_df = pd.concat([descriptor_df_clean[each_key] for each_key in descriptor_df_clean], axis=1)
+    
+    return X_df
     
 
+# Defining main function to perform calculations
+def main_generate_qspr_models_CV(descriptor_keys_to_use,
+                                 output_property_list,
+                                 want_normalize = True,
+                                 model_type_list = ['RF']):
+    """
+    This function runs QSPR models and outputs prediction accuracies using 
+    K-fold cross validation. Note! We are assuming that the columns in X and 
+    y data are in the same order. We may need to double-check this in the future.
+
+    Parameters
+    ----------
+    descriptor_keys_to_use: list
+        List of descriptor keys to use
+    output_property_list: list
+        list of output properties
+    want_normalize: logical
+        True if you want to normalize the X array by subtracting mean and dividing by 
+        standard deviation. 
+    model_type_list: [list]
+        list of models that you want to perform.
+    Returns
+    -------
+    storage_descriptor_sets: [dict]
+        dictionary of dicts that store all information, e.g. [property][descriptor set]
+
+    """
+
+    # Defining storage for each descriptor
+    storage_descriptor_sets = {}
+    
+    # Looping through property labels
+    for property_label in output_property_list:
+        
+        # Creating empty dictionary for property labels
+        storage_descriptor_sets[property_label] = {}
+        
+        # Looping through each dataframe key
+        for descriptor_df_key in descriptor_keys_to_use:
+            # Getting descriptor list
+            descriptor_list = DESCRIPTOR_DICT[descriptor_df_key]['descriptor_list']
+            
+            # Generating combined dataframe
+            X_df = generate_X_df_from_descriptor_list(descriptor_list = descriptor_list)
+            
+            # Re-normalize all columns in the X array
+            if want_normalize is True:
+                scalar_transformation = StandardScaler()
+                X = scalar_transformation.fit_transform(X_df)
+            else:
+                scalar_transformation = None
+                X = X_df.values
+            
+            # Getting y properties
+            csv_data = load_property_data(csv_data_path = DEFAULT_CSV_PATHS["raw_data"],
+                                          keep_list = DEFAULT_INDEX_COLS + [property_label])
+            
+            # Getting location at which csv data exists. True if value exists
+            csv_data_exists = ~csv_data[property_label].isnull() # list of True/False
+            
+            # Defining y array
+            y_array = csv_data[property_label][csv_data_exists].values
+            labels_array = csv_data[DEFAULT_INDEX_COLS[0]][csv_data_exists].values
+            
+            # Getting X for area of existing
+            X_df = X_df[csv_data_exists]
+            X = X[csv_data_exists]
+            
+            # Getting the different folds
+            fold_list = split_dataset_KFolds(X = X, 
+                                             y = y_array, 
+                                             labels = labels_array, 
+                                             n_folds = 5)
+            
+            # Generating models
+            # model = RandomForestRegressor(**RF_DEFAULTS)
+            
+            # Storing model
+            model_storage = {}
+            
+            # Looping through each model
+            for model_type in model_type_list:
+                    
+                # Generating prediction dataframe
+                predict_df, model_list = predict_for_KFolds(model_type = model_type,
+                                                            fold_list = fold_list,
+                                                            return_models = True)
+                
+                # Getting the statistics
+                stats_dict = get_stats(predict_df)
+                
+                # Storing for each model
+                model_storage[model_type] = {
+                    'predict_df': predict_df,
+                    'model_list': model_list,
+                    'stats_dict': stats_dict,
+                    }
+            
+            ######################################################################
+            # Storing all variables
+            storage_descriptor_sets[property_label][descriptor_df_key] = {
+                'X_df': X_df,
+                'X': X,
+                'y': y_array,
+                'fold_list': fold_list,
+                'model_storage': model_storage,
+                }
+            
+    return storage_descriptor_sets
