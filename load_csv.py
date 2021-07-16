@@ -49,7 +49,7 @@ def load_property_data(csv_data_path,
         return csv_data
     else:
         return csv_data[keep_list]
-    
+
 # Function to load descriptor data
 def load_descriptor_data(csv_path,
                          clean_data = True,

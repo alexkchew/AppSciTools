@@ -19,6 +19,9 @@ import copy
 # 5-CV cross validation functions
 from sklearn.model_selection import KFold
 
+# Importing load functions
+from .load_csv import load_multiple_descriptor_data, load_property_data
+
 # Standardization procedures (maybe not necessary)
 from sklearn.preprocessing import StandardScaler
 
@@ -39,6 +42,9 @@ np.random.seed(0)
 RF_DEFAULTS = {
     'n_estimators': 200,
     }
+
+# Defining default index
+DEFAULT_INDEX_COLS = ['Title']
 
 # Function to split the dataset
 def split_dataset_KFolds(X, 
@@ -259,6 +265,7 @@ def generate_X_df_from_descriptor_list(descriptor_list):
 
 # Defining main function to perform calculations
 def main_generate_qspr_models_CV(descriptor_keys_to_use,
+                                 descriptor_dict,
                                  output_property_list,
                                  want_normalize = True,
                                  model_type_list = ['RF']):
@@ -271,6 +278,8 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
     ----------
     descriptor_keys_to_use: list
         List of descriptor keys to use
+    descriptor_dict: [dict]
+        dictionary of descriptors that each contain a 'descriptors_list' and 'label'. 
     output_property_list: list
         list of output properties
     want_normalize: logical
@@ -297,7 +306,7 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
         # Looping through each dataframe key
         for descriptor_df_key in descriptor_keys_to_use:
             # Getting descriptor list
-            descriptor_list = DESCRIPTOR_DICT[descriptor_df_key]['descriptor_list']
+            descriptor_list = descriptor_dict[descriptor_df_key]['descriptor_list']
             
             # Generating combined dataframe
             X_df = generate_X_df_from_descriptor_list(descriptor_list = descriptor_list)
