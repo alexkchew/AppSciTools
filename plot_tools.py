@@ -27,7 +27,11 @@ Functions:
         creates figures based on centimer sizes
 """
 # Importing tools
+import numpy as np
 import matplotlib.pyplot as plt
+
+# Importing relative stats
+from .core.stats import get_stats
 
 ## DEFINING DEFAULT FIGURE SIZES
 FIGURE_SIZES_DICT_CM = {
@@ -127,6 +131,7 @@ def create_fig_based_on_cm(fig_size_cm = (16.8, 16.8)):
 def create_horizontal_bar(labels,
                           values,
                           width = 0.5,
+                          color ='k',
                           xlabel = "Value",
                           fig_size_cm = FIGURE_SIZES_DICT_CM['1_col']):
     """
@@ -159,7 +164,7 @@ def create_horizontal_bar(labels,
     ax.barh(labels, 
             values, 
             width, 
-            color ='k',
+            color = color,
             capsize=2, )
     
     # Reverse axis
@@ -167,6 +172,88 @@ def create_horizontal_bar(labels,
     
     # Setting label
     ax.set_xlabel(xlabel)
+    
+    # Tight layout
+    fig.tight_layout()
+    
+    return fig, ax
+
+# Function that plots the parity plot
+def plot_parity(predict_df,
+                fig_size_cm = FIGURE_SIZES_DICT_CM['1_col'],
+                xlabel = "Actual",
+                ylabel = "Predicted",
+                stats_dict = None,
+                fig = None,
+                ax = None,
+                want_extensive = False,
+                ):
+    """
+    This function plots the parity given a prediction dataframe with 'y_pred' and 'y_act'
+
+    Parameters
+    ----------
+    predict_df : dataframe
+        Prediction dataframe containing 'y_act' and 'y_pred'
+    fig_size_cm: tuple
+        figure size in cm
+    stats_dict: dict, optional
+        statistics for the dataframe. The default value is None. If None, 
+        this function will generate statistics.
+    fig: obj, optional
+        figure object. Default is None.
+    ax: obj, optional
+        axis object. Default is None.
+    want_extensive: logical, optional
+        True if you want extensive statistics box. Default is False
+    Returns
+    -------
+    None.
+
+    """
+    # Generating plot
+    if fig is None or ax is None:
+        fig, ax = create_fig_based_on_cm(fig_size_cm = fig_size_cm)
+    
+    # Defining x and y 
+    x = predict_df['y_act']
+    y = predict_df['y_pred']
+    
+    # Generating plot
+    ax.scatter(x, y, color = 'k')
+    
+    # Adding labels
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    
+    # Drawing y = x line
+    lims = [
+        np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
+        np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes
+    ]
+    
+    ax.plot(lims, lims, 'r-', alpha=0.5, zorder=0)
+    ax.set_aspect('equal')
+    
+    # Generating statistics and including it in the bottom right corner
+    if stats_dict is None:
+        # Generating statistics
+        stats_dict = get_stats(predict_df = predict_df)
+    
+    # Including into the plot
+    if want_extensive is False:
+        box_text = "R$^2$ = %.2f"%(stats_dict['r2'])
+    else:
+        box_text = "R$^2$ = %.2f\nRMSE = %.2f"%(stats_dict['r2'],
+                                                stats_dict['rmse'],
+                                                )
+        
+    # Adding text to axis
+    ax.text(0.95, 0.05, box_text,
+         horizontalalignment='right',
+         verticalalignment='bottom',
+         transform = ax.transAxes,
+         bbox=dict(facecolor='none', edgecolor= 'none', pad=5.0))
     
     # Tight layout
     fig.tight_layout()
