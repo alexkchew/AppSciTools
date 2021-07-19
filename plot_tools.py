@@ -259,3 +259,85 @@ def plot_parity(predict_df,
     fig.tight_layout()
     
     return fig, ax
+
+# Function to plot histograms from csv
+def plot_histogram(values,
+                   n_bins = 20,
+                   fig = None,
+                   ax = None,
+                   ylabel = 'N',
+                   xlabel = 'Property',
+                   want_total_box = True,
+                   fig_size_cm = FIGURE_SIZES_DICT_CM['1_col'],
+                   ):
+    """
+    This function plots the histogram as a bar plot. 
+    
+    Parameters
+    ----------
+    values: np.array
+        values that you want ot plot a histogram for.
+    n_bins: int
+        number of bins ot plot
+    fig: obj, optional
+        figure object. The default value is None.
+    ax: obj, optional
+        axis object.  The default value is None.
+    ylabel: str
+        label of y
+    want_total_box: logical, optional
+        True if you want the total box in the upper right.
+    fig_size_cm: tuple
+        figure size in cm
+        
+    Returns
+    -------
+    
+    fig: obj
+        figure object
+    ax: obj
+        axis object
+    
+    """
+    # Generating plot
+    if fig is None or ax is None:
+        fig, ax = create_fig_based_on_cm(fig_size_cm = fig_size_cm)
+    
+    # Generating histogram
+    hist = ax.hist(values, 
+                   bins = n_bins, 
+                   color = 'gray', 
+                   edgecolor = 'k')
+    
+    # Getting total points
+    n_points = hist[0].sum()
+    
+    # Adding xlabel
+    ax.set_xlabel(xlabel)
+    # Adding y label
+    ax.set_ylabel(ylabel)
+    
+    # Getting y limits
+    y_lims = ax.get_ylim()
+    
+    # Adding labels
+    for rect in ax.patches:
+        height = rect.get_height()
+        if height > 0:
+            ax.annotate(f'{int(height)}', xy=(rect.get_x()+rect.get_width()/2, height), 
+                        xytext=(0, 5), textcoords='offset points', ha='center', va='bottom')
+            
+    # Setting y limits to match y range
+    y_range = y_lims[1] - y_lims[0]
+    ax.set_ylim([y_lims[0], y_lims[1] + y_range * .3])
+            
+    # Adding text to axis
+    if want_total_box is True:
+        box_text = "Total = %d"%(n_points)
+        ax.text(0.95, 0.95, box_text,
+             horizontalalignment='right',
+             verticalalignment='top',
+             transform = ax.transAxes,
+             bbox=dict(facecolor='none', edgecolor= 'none', pad=5.0))
+    
+    return fig, ax

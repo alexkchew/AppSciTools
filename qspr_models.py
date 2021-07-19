@@ -15,6 +15,7 @@ Copyright Schrodinger, LLC. All rights reserved.
 import numpy as np
 import pandas as pd
 import copy
+from scipy import stats
 
 # 5-CV cross validation functions
 from sklearn.model_selection import KFold
@@ -32,6 +33,9 @@ from sklearn.linear_model import LinearRegression, Lasso
 from sklearn.svm import SVR
 from sklearn.pipeline import make_pipeline
 
+# Importing modules
+from sklearn.model_selection import RepeatedKFold, GridSearchCV
+
 # Importing relative stats
 from .core.stats import get_stats
 
@@ -45,6 +49,47 @@ RF_DEFAULTS = {
 
 # Defining default index
 DEFAULT_INDEX_COLS = ['Title']
+
+# Function to convert dataframe values
+def convert_data_for_better_skew(data,
+                                 transform_type = None):
+    """
+    This function converts the data for a better skew
+    
+    Parameters
+    ----------
+    
+    data: dataframe
+        dataframe containing information of a property you want to transform. 
+    transform_type: str, optional
+        transformation type. The default value is None
+    Returns
+    -------
+    transformed data according to your desired type. 
+    
+    Resource:
+        https://towardsdatascience.com/top-3-methods-for-handling-skewed-data-1334e0debf45
+    
+    """
+    # Defining available types
+    available_transforms_ = [
+            None,
+            'log',
+            'sqrt',
+            'box-cox',
+            ]
+    
+    if transform_type is None:
+        return data
+    elif transform_type == 'log':
+        return np.log(data)
+    elif transform_type == 'sqrt':
+        return np.sqrt(data)
+    elif transform_type == 'box-cox':
+        return stats.boxcox(data.values[:,0])
+    else:
+        print("Error! Transform type (%s) is not defined."%(transform_type))
+        print("Available types are: %s"%(', '.join(available_transforms_)))
 
 # Function to split the dataset
 def split_dataset_KFolds(X, 
@@ -67,6 +112,7 @@ def split_dataset_KFolds(X,
         Number of desired folds. The default is 5.
     verbose: logical, optional
         Prints out train / test set split verbosely. The default value is False.
+        
     Returns
     -------
     fold_list : list
@@ -106,6 +152,19 @@ def split_dataset_KFolds(X,
         fold_list.append(output_dict)
         
     return fold_list
+
+# Getting default grid search
+DEFAULT_GRID_SEARCH = {
+        'lasso':{
+                'alpha': np.arange(0.01, 2, 0.01),
+                },
+        'RF':{
+                'n_estimators': np.arange(100, 500, 100),
+                },
+        'lightgbm':{
+                'n_estimators': np.arange(100, 500, 100),
+                },
+        }
 
 # Function to generate model based on type
 def generate_model_based_on_type(model_type):
@@ -152,6 +211,7 @@ def generate_model_based_on_type(model_type):
 # Function to generate predictions for each model
 def predict_for_KFolds(model_type,
                        fold_list,
+                       model_input = None,
                        return_models = False):
     """
     This function predicts using K-folds.
@@ -162,6 +222,8 @@ def predict_for_KFolds(model_type,
         model to use for the K-fold predictions
     fold_list: list
         list of training and testing sets
+    model: obj, optional
+    
     return_models: logical, optional
         True if you want to return the models for each fold. Default is False.
     Returns
@@ -180,7 +242,10 @@ def predict_for_KFolds(model_type,
     # Looping through each
     for train_test_dict in fold_list:
         # Creating a new model
-        model = generate_model_based_on_type(model_type = model_type)
+        if model_input is None:
+            model = generate_model_based_on_type(model_type = model_type)
+        else:
+            model = copy.deepcopy(model_input)
         
         # Fitting model
         model.fit(train_test_dict['X_train'],
@@ -266,15 +331,75 @@ def generate_X_df_from_descriptor_list(descriptor_list,
     
     return X_df
     
+# Function to optimize based on inputs
+def optimize_hyperparams_given_cv(X,
+                                  y,
+                                  estimator = Lasso(),
+                                  param_grid = {
+                                          'alpha': np.arange(0.01, 2, 0.01)
+                                          },
+                                  scoring = 'neg_mean_absolute_error',
+                cv_inputs = dict(
+                    n_splits = 5,
+                    n_repeats = 1,
+                    random_state = 1,
+                    ),
+                
+                        ):
+    """
+    This function optimizes hyperparameters for the models. 
+    
+    Parameters
+    ----------
+    X: [np.array]
+        X array
+    y: [np.array]
+        y array
+
+    estimator: [obj]
+        estimator object
+    param_grid: dict
+        dictionary containing grid to vary
+    cv_inputs: dict, optional
+        dictionary containing cross validation inputs
+        
+    
+        
+    Returns
+    -------
+    grid_cv: obj
+        grid cross validation object
+        Outputs:
+            grid_cv.best_estimator_: Best model object
+            grid_cv.best_params_: Best parameters
+        
+    """
+    # Identifying cross validatoin
+    cv = RepeatedKFold(**cv_inputs)
+
+    # Running cross validation CV
+    grid_cv = GridSearchCV(estimator = estimator,
+                           param_grid =param_grid,
+                           cv = cv,
+                           scoring = scoring,
+                           )
+    
+    # Fitting
+    grid_cv.fit(X,y)
+    
+    return grid_cv
 
 # Defining main function to perform calculations
 def main_generate_qspr_models_CV(descriptor_keys_to_use,
                                  descriptor_dict,
                                  output_property_list,
                                  default_csv_paths,
+                                 exp_data_name = 'raw_data',
                                  default_index_cols = DEFAULT_INDEX_COLS,
                                  want_normalize = True,
-                                 model_type_list = ['RF']):
+                                 model_type_list = ['RF'],
+                                 property_conversion = [],
+                                 hyperparam_tuning = False):
     """
     This function runs QSPR models and outputs prediction accuracies using 
     K-fold cross validation. Note! We are assuming that the columns in X and 
@@ -291,8 +416,15 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
     want_normalize: logical
         True if you want to normalize the X array by subtracting mean and dividing by 
         standard deviation. 
-    model_type_list: [list]
+    model_type_list: list
         list of models that you want to perform.
+    property_conversion: list, optional
+        conversion of property to account for skewness. If this is empty, then 
+        no property corrections are made. Otherwise, this is a list that 
+        corresponds to the list in output_property_list. Hence, input of 
+        ['sqrt'] would correspond to the first property. 
+    hyperparam_tuning: logical, optional
+        True if you want to tune hyper parameters
     Returns
     -------
     storage_descriptor_sets: [dict]
@@ -304,7 +436,7 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
     storage_descriptor_sets = {}
     
     # Looping through property labels
-    for property_label in output_property_list:
+    for property_idx, property_label in enumerate(output_property_list):
         
         # Creating empty dictionary for property labels
         storage_descriptor_sets[property_label] = {}
@@ -327,7 +459,7 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
                 X = X_df.values
             
             # Getting y properties
-            csv_data = load_property_data(csv_data_path = default_csv_paths["raw_data"],
+            csv_data = load_property_data(csv_data_path = default_csv_paths[exp_data_name],
                                           keep_list = default_index_cols + [property_label])
             
             # Getting location at which csv data exists. True if value exists
@@ -335,6 +467,18 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
             
             # Defining y array
             y_array = csv_data[property_label][csv_data_exists].values
+            
+            # Modulinating y array based on the inputs
+            if len(property_conversion) != 0:
+                # Getting property type
+                property_conversion_type = property_conversion[property_idx]
+                # Converting the y array
+                y_array = convert_data_for_better_skew(data = y_array,
+                                                       transform_type = property_conversion_type)
+            else:
+                property_conversion_type = None
+                
+            
             labels_array = csv_data[default_index_cols[0]][csv_data_exists].values
             
             # Getting X for area of existing
@@ -356,6 +500,33 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
             # Looping through each model
             for model_type in model_type_list:
                     
+                # Tuning hyperparameters
+                if hyperparam_tuning is True:
+                    
+                    # Checking if parameter is within
+                    if model_type in DEFAULT_GRID_SEARCH:
+                        # Generating the model
+                        model = generate_model_based_on_type(model_type = model_type)
+                        
+                        
+                        # Getting grid cross validation
+                        grid_cv = optimize_hyperparams_given_cv(X = X,
+                                                                y = y,
+                                                                estimator = model,
+                                                                param_grid = DEFAULT_GRID_SEARCH[model_type],
+                                                          scoring= 'neg_mean_absolute_error',
+                                                        cv_inputs = dict(
+                                                            n_splits = 5,
+                                                            n_repeats = 1,
+                                                            random_state = 1,
+                                                            )
+                                                        )
+                        
+                    else:
+                        print("%s not tuned, since it is not in DEFAULT_GRID_SEARCH"%(model_type))
+                    
+
+                
                 # Generating prediction dataframe
                 predict_df, model_list = predict_for_KFolds(model_type = model_type,
                                                             fold_list = fold_list,
@@ -379,6 +550,7 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
                 'y': y_array,
                 'fold_list': fold_list,
                 'model_storage': model_storage,
+                'property_conversion_type': property_conversion_type,
                 }
             
     return storage_descriptor_sets
