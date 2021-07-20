@@ -299,7 +299,9 @@ def strip_df_index(df,
 
 # Function to generate X_df from descriptor list
 def generate_X_df_from_descriptor_list(descriptor_list,
-                                       default_csv_paths):
+                                       default_csv_paths,
+                                       col2remove = DEFAULT_INDEX_COLS,
+                                       ):
     """
     This function generates the combined dataframe from descriptor list. 
     This assumes that all descriptors have been generated with the same 
@@ -311,7 +313,8 @@ def generate_X_df_from_descriptor_list(descriptor_list,
         List of descriptors that are desired.
     default_csv_paths: dict
         default csv path dictionary
-
+    col2remove: list
+        list of columns to remove from index file
     Returns
     -------
     X_df: [df]
@@ -323,7 +326,9 @@ def generate_X_df_from_descriptor_list(descriptor_list,
                                                        descriptor_list = descriptor_list)
 
     # Cleaning each dictionary
-    descriptor_df_clean = {each_key: strip_df_index(descriptor_df_dict[each_key]) 
+    descriptor_df_clean = {each_key: strip_df_index(descriptor_df_dict[each_key],
+                                                    col2remove = col2remove,
+                                                    ) 
                                               for each_key in descriptor_df_dict}
     
     # Combining dataframes
@@ -520,7 +525,8 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
             
             # Generating combined dataframe
             X_df = generate_X_df_from_descriptor_list(descriptor_list = descriptor_list,
-                                                      default_csv_paths = default_csv_paths,)
+                                                      default_csv_paths = default_csv_paths,
+                                                      col2remove = default_index_cols,)
             
             # Storing orig dataframe ( before any transformations, which is useful 
             # for debugging purposes ). 
