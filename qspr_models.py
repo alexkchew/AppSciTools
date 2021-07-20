@@ -389,6 +389,73 @@ def optimize_hyperparams_given_cv(X,
     
     return grid_cv
 
+# Function to remove correlated descriptors above a threshold
+def remove_corr_descriptors_from_df(X_df,
+                                    threshold = 0.80,
+                                    verbose = True,
+                                    want_details = False):
+    """
+    This function removes correlated descriptors given a dataframe.
+    
+    Parameters
+    ----------
+    X_df: dataframe
+        X descriptors dataframe
+    threshold: float, optional
+        threshold of Pearson's r to be considered correlated. The default 
+        value is 0.80.
+    verbose: logical, optional
+        True if you want to output the removal of descriptors. Default is True.
+    want_details: logical, optional
+        True if you want a dataframe of details. 
+    Returns
+    -------
+    X_df_uncorr: dataframe
+        dataframe with columns that are uncorrelated. 
+    corr_details: dataframe, optional based on want_details
+        dataframe containing correlated descriptors. 
+    """
+    # Getting Pearson's r correlation matrix 
+    corr_matrix = X_df.corr()
+    
+    # Getting names of all deleted columns
+    col_corr = set()
+    
+    # Storing details of correlation
+    corr_details = []
+    
+    # Looping over rows
+    for i in range(len(corr_matrix.columns)):
+        # Looping over columns
+        for j in range(i):
+            # Checking if the correlation matrix is greater than or equal to threshold, 
+            # as well as whether the columns are not within the correlation cols
+            if (np.abs(corr_matrix.iloc[i, j]) >= threshold) and (corr_matrix.columns[j] not in col_corr):
+                colname = corr_matrix.columns[i] # getting the name of column
+                col_corr.add(colname)
+                # Storing to details
+                corr_details.append({
+                        'i': corr_matrix.columns[i],
+                        'j': corr_matrix.columns[j],
+                        'Pearson r': corr_matrix.iloc[i, j],
+                        })
+    
+    # Creating dataframe
+    corr_details = pd.DataFrame(corr_details)
+    
+    # Getting X df uncor
+    X_df_uncorr = X_df.drop(columns=col_corr)
+    
+    if verbose is True:
+        print("Removing correlated descriptors >= %.2f"%(threshold))
+        print("   %d correlated descriptors"%(len(col_corr)))
+        print("   %d original descriptors"%(len(X_df.columns)))
+        print("   %d output descriptors"%(len(X_df_uncorr.columns)))
+    if want_details is True:
+        return X_df_uncorr, corr_details
+    else:
+        return X_df_uncorr
+
 # Defining main function to perform calculations
 def main_generate_qspr_models_CV(descriptor_keys_to_use,
                                  descriptor_dict,
@@ -399,7 +466,8 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
                                  want_normalize = True,
                                  model_type_list = ['RF'],
                                  property_conversion = [],
-                                 hyperparam_tuning = False):
+                                 hyperparam_tuning = False,
+                                 remove_des_corr_float = None):
     """
     This function runs QSPR models and outputs prediction accuracies using 
     K-fold cross validation. Note! We are assuming that the columns in X and 
@@ -424,7 +492,11 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
         corresponds to the list in output_property_list. Hence, input of 
         ['sqrt'] would correspond to the first property. 
     hyperparam_tuning: logical, optional
-        True if you want to tune hyper parameters
+        True if you want to tune hyper parameters using 5-CV. The default value 
+        is False. 
+    remove_des_corr_float: float, optional
+        Pearson's r correlaton coefficient at which correlated descriptors are
+        removed. 
     Returns
     -------
     storage_descriptor_sets: [dict]
@@ -449,6 +521,21 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
             # Generating combined dataframe
             X_df = generate_X_df_from_descriptor_list(descriptor_list = descriptor_list,
                                                       default_csv_paths = default_csv_paths,)
+            
+            # Storing orig dataframe ( before any transformations, which is useful 
+            # for debugging purposes ). 
+            X_df_orig = X_df.copy()
+            
+            # Removing correlated descriptors
+            if remove_des_corr_float is not None:
+                
+                # Getting new dataframe
+                X_df, corr_details = remove_corr_descriptors_from_df(X_df = X_df,
+                                                       threshold = remove_des_corr_float,
+                                                       verbose = True,
+                                                       want_details = True)
+            else:
+                corr_details = None
             
             # Re-normalize all columns in the X array
             if want_normalize is True:
@@ -478,7 +565,7 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
             else:
                 property_conversion_type = None
                 
-            
+            # Getting label arrays
             labels_array = csv_data[default_index_cols[0]][csv_data_exists].values
             
             # Getting X for area of existing
@@ -491,9 +578,6 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
                                              labels = labels_array, 
                                              n_folds = 5)
             
-            # Generating models
-            # model = RandomForestRegressor(**RF_DEFAULTS)
-            
             # Storing model
             model_storage = {}
             
@@ -505,13 +589,15 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
                     
                     # Checking if parameter is within
                     if model_type in DEFAULT_GRID_SEARCH:
+                        # Printing
+                        print("Tuning %s..."%(model_type))
+                        
                         # Generating the model
                         model = generate_model_based_on_type(model_type = model_type)
                         
-                        
                         # Getting grid cross validation
                         grid_cv = optimize_hyperparams_given_cv(X = X,
-                                                                y = y,
+                                                                y = y_array,
                                                                 estimator = model,
                                                                 param_grid = DEFAULT_GRID_SEARCH[model_type],
                                                           scoring= 'neg_mean_absolute_error',
@@ -522,14 +608,20 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
                                                             )
                                                         )
                         
+                        # Getting best model
+                        best_model = grid_cv.best_estimator_
+                        
                     else:
                         print("%s not tuned, since it is not in DEFAULT_GRID_SEARCH"%(model_type))
+                        best_model = None
+                        grid_cv = None
                     
 
                 
                 # Generating prediction dataframe
                 predict_df, model_list = predict_for_KFolds(model_type = model_type,
                                                             fold_list = fold_list,
+                                                            model_input = best_model,
                                                             return_models = True)
                 
                 # Getting the statistics
@@ -540,6 +632,7 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
                     'predict_df': predict_df,
                     'model_list': model_list,
                     'stats_dict': stats_dict,
+                    'grid_cv': grid_cv,
                     }
             
             ######################################################################
@@ -551,6 +644,8 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
                 'fold_list': fold_list,
                 'model_storage': model_storage,
                 'property_conversion_type': property_conversion_type,
+                'X_df_orig': X_df_orig,
+                'corr_details': corr_details,
                 }
             
     return storage_descriptor_sets

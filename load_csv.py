@@ -53,6 +53,7 @@ def load_property_data(csv_data_path,
 # Function to load descriptor data
 def load_descriptor_data(csv_path,
                          clean_data = True,
+                         output_filtered_data = False,
                          default_index_cols = DEFAULT_INDEX_COLS):
     """
     This function loads the descriptor information. Note that all:
@@ -65,6 +66,9 @@ def load_descriptor_data(csv_path,
         Path to csv file
     clean_data: logical, default = True
         True if you want to clean the data by removing non-numerical descriptors / NaN columns
+    output_filtered_data: logical, optional
+        True if you want to output the filtered data as a separate csv file. 
+        The default value is False.
 
     Returns
     -------
@@ -82,13 +86,30 @@ def load_descriptor_data(csv_path,
         csv_df_nonan = csv_df.dropna(axis=1) # Removes NaN values
         csv_df_nums = csv_df_nonan.select_dtypes(['number']) # Numbers only stored
         
-        # Removing cols with low variance
-        output_df = filter_by_variance_threshold(X_df = csv_df_nums)
+        try:
         
-        # Adding back the index cols to the beginning
-        for each_col in default_index_cols[::-1]: # Reverse order
-            if each_col in csv_df:
-                output_df.insert (0, each_col, csv_df[each_col])
+            # Removing cols with low variance
+            output_df = filter_by_variance_threshold(X_df = csv_df_nums)
+            
+            # Adding back the index cols to the beginning
+            for each_col in default_index_cols[::-1]: # Reverse order
+                if each_col in csv_df:
+                    output_df.insert (0, each_col, csv_df[each_col])
+        except ValueError: # Happens when you have a blank dataframe
+            print("No columns found that matches filtration for %s"%(csv_path))
+            cols_to_include = [each_col for each_col in default_index_cols if each_col in csv_df.columns]
+            output_df = csv_df[cols_to_include]
+        
+        # Storing dataframe
+        if output_filtered_data is True:
+            # Getting path without 
+            csv_path_without_ext = os.path.splitext(csv_path)[0]
+            # Getting filtered nomenclature
+            csv_path_with_new_name = csv_path_without_ext + "_filtered.csv"
+            # Storing
+            print("Storing filtered data to: %s"%(csv_path_with_new_name))
+            output_df.to_csv(csv_path_with_new_name, index = False)
+        
         return output_df
     else:
         return csv_df
@@ -97,6 +118,7 @@ def load_descriptor_data(csv_path,
 def load_multiple_descriptor_data(default_csv_paths,
                                   descriptor_list = ["2d_descriptors",
                                                      "3d_descriptors",],
+                                 **args
                                  ):
     """
     This function loads multiple descriptor data given a descriptor list.
@@ -107,6 +129,8 @@ def load_multiple_descriptor_data(default_csv_paths,
         dictionary of csv paths
     descriptor_list : list
         list of descriptors to load from dictionary
+        
+    Remainder of arguments go into the load descriptor function
 
     Returns
     -------
@@ -115,7 +139,7 @@ def load_multiple_descriptor_data(default_csv_paths,
 
     """
     # Loading all descriptor files
-    descriptor_df_dict = { each_descriptor_key: load_descriptor_data(default_csv_paths[each_descriptor_key]) 
+    descriptor_df_dict = { each_descriptor_key: load_descriptor_data(default_csv_paths[each_descriptor_key], **args) 
                                                               for each_descriptor_key in descriptor_list }
     
     return descriptor_df_dict
