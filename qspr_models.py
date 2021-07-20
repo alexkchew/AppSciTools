@@ -27,11 +27,10 @@ from .load_csv import load_multiple_descriptor_data, load_property_data
 from sklearn.preprocessing import StandardScaler
 
 # Generate models
-from lightgbm import LGBMRegressor # Module isn't working correctly at this time
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import LinearRegression, Lasso
-from sklearn.svm import SVR
-from sklearn.pipeline import make_pipeline
+from sklearn.linear_model import Lasso
+
+
+
 
 # Importing modules
 from sklearn.model_selection import RepeatedKFold, GridSearchCV
@@ -49,6 +48,122 @@ RF_DEFAULTS = {
 
 # Defining default index
 DEFAULT_INDEX_COLS = ['Title']
+
+# Getting default grid search
+DEFAULT_GRID_SEARCH = {
+        'lasso':{
+                'alpha': np.arange(0.01, 2, 0.01),
+                },
+        'RF':{
+                'n_estimators': np.arange(100, 500, 100),
+                },
+        'lightgbm':{
+                'n_estimators': np.arange(100, 500, 100),
+                },
+        'pls': {
+                'n_components': np.arange(2,20),
+                },
+        'knn': {
+                'n_neighbors': np.arange(5, 15),
+                }
+        }
+        
+
+
+# Function to generate model based on type
+def generate_model_based_on_type(model_type):
+    """
+    This function generates a model based on the type that you want. 
+
+    Parameters
+    ----------
+    model_type : str
+        type of model that you want. The full list is shown below:
+            'RF':
+                random forest regressor
+            'lightgbm':
+                Light gradient boosted machine learning model, e.g.
+                    https://machinelearningmastery.com/light-gradient-boosted-machine-lightgbm-ensemble/
+            'linear':
+                Classical linear regression model
+            'lasso':
+                Lasso model
+            'svr':
+                support vector regression
+            'pls':
+                partial least squares regression
+            'knn':
+                K nearest regressor
+            'gpr':
+                Gaussian process regression
+                Example link: https://towardsdatascience.com/quick-start-to-gaussian-process-regression-36d838810319
+            'gradient_boost_regression':
+                gradient boost regression
+            'baysian_ridge':
+                Baysian ridge regression
+            'elastic_net':
+                Linear elastic net model
+            'kernel_ridge':
+                kernel ridge regression
+            'xgboost':
+                XGBoost regressor
+            
+        Many examples are available:
+            https://www.educative.io/blog/scikit-learn-cheat-sheet-classification-regression-methods#regression
+            
+    Returns
+    -------
+    model: [obj]
+        model object
+
+    """
+    # Iteratively find model types
+    if model_type == 'RF':
+        from sklearn.ensemble import RandomForestRegressor
+        model = RandomForestRegressor(**RF_DEFAULTS)
+    elif model_type == 'lightgbm':
+        from lightgbm import LGBMRegressor # Module isn't working correctly at this time
+        model = LGBMRegressor() # **RF_DEFAULTS
+    elif model_type == 'linear':
+        from sklearn.linear_model import LinearRegression
+        model = LinearRegression()
+    elif model_type == 'lasso':
+        from sklearn.linear_model import Lasso
+        model = Lasso(max_iter=10000000)
+    elif model_type == 'svr':
+        from sklearn.svm import SVR
+        model = SVR()
+        # model = make_pipeline(StandardScaler(), SVgradient_boost_regressionR(C=1.0, epsilon=0.2))
+    elif model_type == 'pls':
+        # Partial least squares
+        from sklearn.cross_decomposition import PLSRegression
+        model = PLSRegression()
+    elif model_type == 'knn':
+        from sklearn.neighbors import KNeighborsRegressor
+        model = KNeighborsRegressor()
+    elif model_type == 'gpr':
+        from sklearn.gaussian_process import GaussianProcessRegressor
+        model = GaussianProcessRegressor()
+    elif model_type == 'gradient_boost_regression':
+        from sklearn.ensemble import GradientBoostingRegressor
+        model = GradientBoostingRegressor()
+    elif model_type == 'baysian_ridge':
+        from sklearn.linear_model import BayesianRidge
+        model = BayesianRidge()
+    elif model_type == 'elastic_net':
+        from sklearn.linear_model import ElasticNet
+        model = ElasticNet()
+    elif model_type == 'kernel_ridge':
+        from sklearn.kernel_ridge import KernelRidge
+        model = KernelRidge()
+    elif model_type == 'xgboost':
+        from xgboost.sklearn import XGBRegressor
+        model = XGBRegressor()
+    
+    else:
+        print("Error! Model type (%s) not found!"%(model_type))
+    return model
+
 
 # Function to convert dataframe values
 def convert_data_for_better_skew(data,
@@ -153,61 +268,6 @@ def split_dataset_KFolds(X,
         
     return fold_list
 
-# Getting default grid search
-DEFAULT_GRID_SEARCH = {
-        'lasso':{
-                'alpha': np.arange(0.01, 2, 0.01),
-                },
-        'RF':{
-                'n_estimators': np.arange(100, 500, 100),
-                },
-        'lightgbm':{
-                'n_estimators': np.arange(100, 500, 100),
-                },
-        }
-
-# Function to generate model based on type
-def generate_model_based_on_type(model_type):
-    """
-    This function generates a model based on the type that you want. 
-
-    Parameters
-    ----------
-    model_type : str
-        type of model that you want. The full list is shown below:
-            'RF':
-                random forest regressor
-            'lightgbm':
-                Light gradient boosted machine learning model, e.g.
-                    https://machinelearningmastery.com/light-gradient-boosted-machine-lightgbm-ensemble/
-            'linear':
-                Classical linear regression model
-            'lasso':
-                Lasso model
-            'svr':
-                support vector regression
-
-    Returns
-    -------
-    model: [obj]
-        model object
-
-    """
-    # Iteratively find model types
-    if model_type == 'RF':
-        model = RandomForestRegressor(**RF_DEFAULTS)
-    elif model_type == 'lightgbm':
-        model = LGBMRegressor() # **RF_DEFAULTS
-    elif model_type == 'linear':
-        model = LinearRegression()
-    elif model_type == 'lasso':
-        model = Lasso(max_iter=10000000)
-    elif model_type == 'svr':
-        model = make_pipeline(StandardScaler(), SVR(C=1.0, epsilon=0.2))
-    else:
-        print("Error! Model type (%s) not found!"%(model_type))
-    return model
-
 # Function to generate predictions for each model
 def predict_for_KFolds(model_type,
                        fold_list,
@@ -253,6 +313,11 @@ def predict_for_KFolds(model_type,
         
         # Predicting test set
         yhat = model.predict(train_test_dict['X_test'])
+        
+        # Checking if the prediction is a shape (N, 1)
+        if len(yhat.shape) == 2:
+            # Fixing y hat for when predictions have multiple columns
+            yhat = yhat[:,0]
         
         # Creating dataframe
         df = pd.DataFrame(np.array([yhat, train_test_dict['y_test'], train_test_dict['labels_test']]).T,

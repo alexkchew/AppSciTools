@@ -15,6 +15,7 @@ import numpy as np
 
 # Importing statistics
 from sklearn.metrics import r2_score, mean_squared_error
+from scipy.stats import pearsonr
 
 # Function to get statistics
 def get_stats(predict_df):
@@ -40,7 +41,8 @@ def get_stats(predict_df):
     # Defining stats dict
     stats_dict = {
         'r2': r2_score(actual, pred),
-        'mse': mean_squared_error(actual, pred)
+        'mse': mean_squared_error(actual, pred),
+        'pearsonr': pearsonr(actual, pred)[0],
         }
     
     # Adding RMSE
