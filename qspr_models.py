@@ -68,7 +68,22 @@ DEFAULT_GRID_SEARCH = {
                 }
         }
         
-
+# Getting all available models
+AVAILABLE_MODELS = [
+        'linear',
+        'lasso',
+        'RF',
+        'lightgbm', 
+        'pls', 
+        'knn', 
+        'gpr', 
+        'svr',
+        'gradient_boost_regression',
+        'baysian_ridge',
+        'elastic_net',
+        'kernel_ridge',
+        'xgboost',        
+        ]
 
 # Function to generate model based on type
 def generate_model_based_on_type(model_type):

@@ -33,6 +33,13 @@ import matplotlib.pyplot as plt
 # Importing relative stats
 from .core.stats import get_stats
 
+# Defining statistics global var
+STATS_NAME_CONVERSION_DICT = {
+        'pearsonr': "Pearson's $r$",
+        'r2' : "R$^2$",
+        'rmse': 'RMSE'
+        }
+
 ## DEFINING DEFAULT FIGURE SIZES
 FIGURE_SIZES_DICT_CM = {
         '1_col': (8.55, 8.55),
@@ -178,6 +185,44 @@ def create_horizontal_bar(labels,
     
     return fig, ax
 
+# Function o create a box text based on states desired
+def generate_box_text(stats_dict, stats_desired):
+    """
+    This function generates a box string based on the desired stats list.
+    
+    Parameters
+    ----------
+    stats_dict: dict
+        dictionary of statistics
+    stats_desired: list
+        list of statistics
+            
+    Returns
+    -------
+    box_text: str
+        box text
+    """
+    # Getting default box text
+    box_text = ''
+    # Looping through each stats desired
+    for stat_idx, each_stat in enumerate(stats_desired):
+        # Checking if the stat is within stat dict
+        if each_stat in stats_dict:
+            # Getting box text string
+            if each_stat in STATS_NAME_CONVERSION_DICT:
+                initial_string = STATS_NAME_CONVERSION_DICT[each_stat]
+            else:
+                initial_string = each_stat
+            # Getting string
+            input_str = "%s = %.2f"%(initial_string, stats_dict[each_stat])
+            # Adding \n if we still need to add a new line
+            if stat_idx != len(stats_desired) - 1:
+                input_str += "\n"
+            # Adding to box text
+            box_text += input_str
+    
+    return box_text
+
 # Function that plots the parity plot
 def plot_parity(predict_df,
                 fig_size_cm = FIGURE_SIZES_DICT_CM['1_col'],
@@ -187,6 +232,7 @@ def plot_parity(predict_df,
                 fig = None,
                 ax = None,
                 want_extensive = False,
+                stats_desired = None,
                 ):
     """
     This function plots the parity given a prediction dataframe with 'y_pred' and 'y_act'
@@ -206,9 +252,12 @@ def plot_parity(predict_df,
         axis object. Default is None.
     want_extensive: logical, optional
         True if you want extensive statistics box. Default is False
+    stats_desired: list, optional
+        list of stats desired. The default value is None.
     Returns
     -------
-    None.
+    fig, ax: obj
+        figure and axis object
 
     """
     # Generating plot
@@ -247,7 +296,11 @@ def plot_parity(predict_df,
         box_text = "R$^2$ = %.2f\nRMSE = %.2f"%(stats_dict['r2'],
                                                 stats_dict['rmse'],
                                                 )
-        
+    # Getting stats desired
+    if stats_desired is not None:
+        # Changing box text
+        box_text = generate_box_text(stats_dict, stats_desired)
+    
     # Adding text to axis
     ax.text(0.95, 0.05, box_text,
          horizontalalignment='right',

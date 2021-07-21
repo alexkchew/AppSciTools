@@ -11,17 +11,13 @@ Author: Alex K. Chew (alex.chew@schrodinger.com)
 
 Copyright Schrodinger, LLC. All rights reserved.
 """
+import matplotlib.pyplot as plt
 
 # Importing plot tools
 from . import plot_tools
 
-
-# Defining statistics global var
-STATS_NAME_CONVERSION_DICT = {
-        'pearsonr': "Pearson's $r$",
-        'r2' : "R$^2$",
-        'rmse': 'RMSE'
-        }
+# Importing specific plot tolols
+from .plot_tools import STATS_NAME_CONVERSION_DICT
 
 # Defining model dict
 MODEL_NAME_CONVERSION_DICT = {
@@ -125,9 +121,6 @@ def plot_model_comparison(error_storage,
     x_labels = [ MODEL_NAME_CONVERSION_DICT[each_model] if each_model in MODEL_NAME_CONVERSION_DICT else each_model for each_model in x_labels ]
     
     
-    # Getting multiple bar plots
-    # ind = np.arange(len(x_labels))
-    
     # Getting y values
     y = [error_for_property[each_model] for each_model in error_for_property.keys()]
     
@@ -176,6 +169,8 @@ def plot_model_comparison_for_property(storage_descriptor_sets,
         contains all the raw information from model training.
     model_type_list: list
         list of models that you have trained the models on.
+    property_name: str
+        property name that you are interested in
     descriptor_key: str
         descriptor key to use
     fig_size_cm: tuple, optional
@@ -187,6 +182,9 @@ def plot_model_comparison_for_property(storage_descriptor_sets,
     -------
     fig, ax: obj
         fig and axis object
+    error_storage: dict
+        dictionary containig error storage
+    
     """
     # Getting error storage
     error_storage = extract_model_errors(storage_descriptor_sets = storage_descriptor_sets,
@@ -202,5 +200,94 @@ def plot_model_comparison_for_property(storage_descriptor_sets,
                                     width = width,
                                     fig_size_cm = fig_size_cm,
                                     )
+    
+    return fig, ax, error_storage
+
+# Function to plot specific models in sub plots
+def plot_multiple_parity_for_property_as_subplots(plot_specific_models,
+                                                  storage_descriptor_sets,
+                                                  property_name = 'Experimental E(S1T1)',
+                                                  descriptor_key = '2d_and_qm_descriptors',
+                                                  figsize = plot_tools.cm2inch(*(24, 12)),
+                                                  MAX_STRING_LENGTH = 20,
+                                                  stats_desired = ['r2', 'rmse']):
+    """
+    This function plots multiple parities as a subplot. 
+    
+    Parameters
+    ----------
+    plot_specific_models: list
+        list of specific models that you would like to plot
+    property_name: str
+        property name that you are interested in
+    descriptor_key: str
+        descriptor key to use
+    figsize: tuple, optional
+        figure size in inches
+    MAX_STRING_LENGTH: int
+        maximum string length to use
+    Returns
+    -------
+    fig, ax: obj
+        fig and axis object
+        
+        
+    Examples
+    -------
+    
+    
+    fig, ax = plot_qspr_models.plot_multiple_parity_for_property_as_subplots(storage_descriptor_sets = storage_descriptor_sets,
+                                                                             plot_specific_models = plot_specific_models,
+                                                                             property_name = 'Experimental E(S1T1)',
+                                                                             descriptor_key = '2d_and_qm_descriptors',
+                                                                             figsize = plot_tools.cm2inch(*(20, 12)),
+                                                                             MAX_STRING_LENGTH = None,
+                                                                             stats_desired = ['pearsonr', 'rmse'])    
+    
+    
+    """
+    # Defining figure and axis
+    fig, axs = plt.subplots(nrows = 1,
+                            ncols = len(plot_specific_models),
+                            sharey = False,
+                            sharex = False,
+                            figsize = figsize)
+    
+    # Looping through each model
+    for idx_model, each_model in enumerate(plot_specific_models):
+        # Getting axis
+        ax = axs[idx_model]
+        
+        # Getting results
+        prediction_dict = storage_descriptor_sets[property_name][descriptor_key]['model_storage'][each_model]
+        predict_df = prediction_dict['predict_df']
+        stats_dict = prediction_dict['stats_dict']
+        
+        # Plotting figure and axis
+        fig, ax = plot_tools.plot_parity(predict_df = predict_df,
+                                  stats_dict = stats_dict,
+                                  xlabel = "Actual",
+                                  ylabel = "Predicted",
+                                  fig = fig,
+                                  ax = ax,
+                                  want_extensive = True,
+                                  stats_desired = stats_desired
+                                  )
+        # Getting title
+        if each_model in MODEL_NAME_CONVERSION_DICT:
+            output_title = MODEL_NAME_CONVERSION_DICT[each_model]                
+        else:
+            output_title = each_model
+        
+        # Checking if it is not none
+        if MAX_STRING_LENGTH is not None:
+            output_title = output_title[:MAX_STRING_LENGTH]
+        
+        # Adding title
+        ax.set_title("%s"%(output_title),
+                     fontsize = 10)
+    
+    # Tight layout figure
+    fig.tight_layout()
     
     return fig, ax
