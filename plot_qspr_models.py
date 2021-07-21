@@ -12,6 +12,7 @@ Author: Alex K. Chew (alex.chew@schrodinger.com)
 Copyright Schrodinger, LLC. All rights reserved.
 """
 import matplotlib.pyplot as plt
+import pandas as pd
 
 # Importing plot tools
 from . import plot_tools
@@ -83,7 +84,8 @@ def plot_model_comparison(error_storage,
                           property_name,
                           xlabel = 'stat',
                           width = 0.2,
-                          fig_size_cm = plot_tools.FIGURE_SIZES_DICT_CM['1_col']
+                          fig_size_cm = plot_tools.FIGURE_SIZES_DICT_CM['1_col'],
+                          ascending = None
                           ):
     """
     This function plots the model performance for a particular statistic as  
@@ -102,6 +104,9 @@ def plot_model_comparison(error_storage,
         figure size. The default values are stored within FIGURE_SIZES_DICT_CM.
     xlabel: str
         xlabel to plot on
+    ascending: logical, optional
+        True if you want to sort models by ascending or decending (True/False).
+        The default value is None.
         
     Returns
     -------
@@ -112,7 +117,10 @@ def plot_model_comparison(error_storage,
     fig, ax = plot_tools.create_fig_based_on_cm(fig_size_cm = fig_size_cm)
     
     # Getting the error dictionary
-    error_for_property = error_storage[property_name]
+    error_for_property = pd.Series(error_storage[property_name])
+    
+    if ascending is not None:
+        error_for_property = error_for_property.sort_values(ascending = ascending)
     
     # Getting the model labels
     x_labels = list(error_for_property.keys())
@@ -120,9 +128,9 @@ def plot_model_comparison(error_storage,
     # Converting x labels if within model
     x_labels = [ MODEL_NAME_CONVERSION_DICT[each_model] if each_model in MODEL_NAME_CONVERSION_DICT else each_model for each_model in x_labels ]
     
-    
     # Getting y values
-    y = [error_for_property[each_model] for each_model in error_for_property.keys()]
+    y = error_for_property.values
+    # [error_for_property[each_model] for each_model in error_for_property.keys()]
     
     # Plotting horizontal plot
     ax.barh(x_labels,
@@ -159,6 +167,7 @@ def plot_model_comparison_for_property(storage_descriptor_sets,
                                        descriptor_key = '2d_and_qm_descriptors',
                                        width = 0.2,
                                        fig_size_cm = plot_tools.FIGURE_SIZES_DICT_CM['1_col'],
+                                       ascending = None,
                                        ):
     """
     This function plots model comparison for a property. 
@@ -176,7 +185,10 @@ def plot_model_comparison_for_property(storage_descriptor_sets,
     fig_size_cm: tuple, optional
         figure size. The default values are stored within FIGURE_SIZES_DICT_CM.
     width: float, optional
-        width of the distributions
+        width of the distributions        
+    ascending: logical, optional
+        True if you want to sort models by ascending or decending (True/False).
+        The default value is None.
         
     Returns
     -------
@@ -199,6 +211,7 @@ def plot_model_comparison_for_property(storage_descriptor_sets,
                                     xlabel = stat_var,
                                     width = width,
                                     fig_size_cm = fig_size_cm,
+                                    ascending = ascending,
                                     )
     
     return fig, ax, error_storage
