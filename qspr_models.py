@@ -29,9 +29,6 @@ from sklearn.preprocessing import StandardScaler
 # Generate models
 from sklearn.linear_model import Lasso
 
-
-
-
 # Importing modules
 from sklearn.model_selection import RepeatedKFold, GridSearchCV
 
@@ -381,6 +378,7 @@ def strip_df_index(df,
 def generate_X_df_from_descriptor_list(descriptor_list,
                                        default_csv_paths,
                                        col2remove = DEFAULT_INDEX_COLS,
+                                       **args,
                                        ):
     """
     This function generates the combined dataframe from descriptor list. 
@@ -395,6 +393,9 @@ def generate_X_df_from_descriptor_list(descriptor_list,
         default csv path dictionary
     col2remove: list
         list of columns to remove from index file
+        
+    **args goes into loading descriptor data
+    
     Returns
     -------
     X_df: [df]
@@ -403,7 +404,8 @@ def generate_X_df_from_descriptor_list(descriptor_list,
     
     # Getting descriptors
     descriptor_df_dict = load_multiple_descriptor_data(default_csv_paths = default_csv_paths,
-                                                       descriptor_list = descriptor_list)
+                                                       descriptor_list = descriptor_list,
+                                                       **args)
 
     # Cleaning each dictionary
     descriptor_df_clean = {each_key: strip_df_index(descriptor_df_dict[each_key],
@@ -727,6 +729,7 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
                 'X_df': X_df,
                 'X': X,
                 'y': y_array,
+                'scalar_transformation': scalar_transformation,
                 'fold_list': fold_list,
                 'model_storage': model_storage,
                 'property_conversion_type': property_conversion_type,

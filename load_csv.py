@@ -53,6 +53,7 @@ def load_property_data(csv_data_path,
 # Function to load descriptor data
 def load_descriptor_data(csv_path,
                          clean_data = True,
+                         filter_by_variance = True,
                          output_filtered_data = False,
                          default_index_cols = DEFAULT_INDEX_COLS):
     """
@@ -69,6 +70,8 @@ def load_descriptor_data(csv_path,
     output_filtered_data: logical, optional
         True if you want to output the filtered data as a separate csv file. 
         The default value is False.
+    filter_by_variance: logical, optional
+        True if you want to filter by variance. By default, this is True.
 
     Returns
     -------
@@ -89,11 +92,15 @@ def load_descriptor_data(csv_path,
         try:
         
             # Removing cols with low variance
-            output_df = filter_by_variance_threshold(X_df = csv_df_nums)
+            if filter_by_variance is True:
+                output_df = filter_by_variance_threshold(X_df = csv_df_nums)
+            else:
+                print("Skipping variance filtration for %s"%(csv_path))
+                output_df = csv_df_nums
             
             # Adding back the index cols to the beginning
             for each_col in default_index_cols[::-1]: # Reverse order
-                if each_col in csv_df:
+                if each_col in csv_df and each_col not in output_df:
                     output_df.insert (0, each_col, csv_df[each_col])
         except ValueError: # Happens when you have a blank dataframe
             print("No columns found that matches filtration for %s"%(csv_path))

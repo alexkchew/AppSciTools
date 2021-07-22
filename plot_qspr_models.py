@@ -269,7 +269,10 @@ def plot_multiple_parity_for_property_as_subplots(plot_specific_models,
     # Looping through each model
     for idx_model, each_model in enumerate(plot_specific_models):
         # Getting axis
-        ax = axs[idx_model]
+        try:
+            ax = axs[idx_model]
+        except TypeError:
+            ax = axs
         
         # Getting results
         prediction_dict = storage_descriptor_sets[property_name][descriptor_key]['model_storage'][each_model]
