@@ -233,6 +233,8 @@ def plot_parity(predict_df,
                 ax = None,
                 want_extensive = False,
                 stats_desired = None,
+                df_act_key = 'y_act',
+                df_pred_key = 'y_pred',
                 ):
     """
     This function plots the parity given a prediction dataframe with 'y_pred' and 'y_act'
@@ -254,6 +256,10 @@ def plot_parity(predict_df,
         True if you want extensive statistics box. Default is False
     stats_desired: list, optional
         list of stats desired. The default value is None.
+    df_act_key: str, optional
+        actual key for dataframe. The default value is 'y_act'.
+    df_pred_key: str, optional
+        prediction key for dataframe. The default value is 'y_pred'.
     Returns
     -------
     fig, ax: obj
@@ -265,8 +271,8 @@ def plot_parity(predict_df,
         fig, ax = create_fig_based_on_cm(fig_size_cm = fig_size_cm)
     
     # Defining x and y 
-    x = predict_df['y_act']
-    y = predict_df['y_pred']
+    x = predict_df[df_act_key]
+    y = predict_df[df_pred_key]
     
     # Generating plot
     ax.scatter(x, y, color = 'k')
@@ -287,7 +293,9 @@ def plot_parity(predict_df,
     # Generating statistics and including it in the bottom right corner
     if stats_dict is None:
         # Generating statistics
-        stats_dict = get_stats(predict_df = predict_df)
+        stats_dict = get_stats(predict_df = predict_df,
+                               df_act_key = df_act_key,
+                               df_pred_key = df_pred_key)
     
     # Including into the plot
     if want_extensive is False:

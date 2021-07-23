@@ -18,7 +18,10 @@ from sklearn.metrics import r2_score, mean_squared_error
 from scipy.stats import pearsonr
 
 # Function to get statistics
-def get_stats(predict_df):
+def get_stats(predict_df,
+              df_act_key='y_act',
+              df_pred_key='y_pred',
+              ):
     """
     This function generates statistics for a prediction. It will output 
     a dictionary with many parameters used to deduce the strength of the 
@@ -28,6 +31,11 @@ def get_stats(predict_df):
     ----------
     predict_df : dataframe
         Prediction dataframe containing 'y_act' and 'y_pred'
+    df_act_key: str, optional
+        actual key for dataframe. The default value is 'y_act'.
+    df_pred_key: str, optional
+        prediction key for dataframe. The default value is 'y_pred'.
+
     Returns
     -------
     stats_dict: [dict]
@@ -35,8 +43,8 @@ def get_stats(predict_df):
 
     """
     # Defining x and y 
-    actual = predict_df['y_act']
-    pred = predict_df['y_pred']
+    actual = predict_df[df_act_key]
+    pred = predict_df[df_pred_key]
     
     # Defining stats dict
     stats_dict = {
