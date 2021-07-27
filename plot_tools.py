@@ -29,7 +29,7 @@ Functions:
 # Importing tools
 import numpy as np
 import matplotlib
-matplotlib.use('TkAgg')
+matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 
 # Importing relative stats
@@ -53,29 +53,28 @@ FIGURE_SIZES_DICT_CM = {
 
 ### FUNCTION TO SET MPL DEFAULTS
 def set_mpl_defaults():
-    ''' 
-    This function sets all default parameters 
+    '''
+    This function sets all default parameters
     # https://matplotlib.org/tutorials/introductory/customizing.html
     '''
-    import matplotlib as mpl
-    mpl.rcParams['lines.linewidth'] = 2
-    mpl.rcParams['axes.linewidth'] = 1
-    mpl.rcParams['axes.labelsize'] = 10
-    mpl.rcParams['xtick.labelsize'] = 8
-    mpl.rcParams['ytick.labelsize'] = 8
+    matplotlib.rcParams['lines.linewidth'] = 2
+    matplotlib.rcParams['axes.linewidth'] = 1
+    matplotlib.rcParams['axes.labelsize'] = 10
+    matplotlib.rcParams['xtick.labelsize'] = 8
+    matplotlib.rcParams['ytick.labelsize'] = 8
     ## EDITING TICKS
-    mpl.rcParams['xtick.major.width'] = 1.0
-    mpl.rcParams['ytick.major.width'] = 1.0
-    
+    matplotlib.rcParams['xtick.major.width'] = 1.0
+    matplotlib.rcParams['ytick.major.width'] = 1.0
+
     ## FONT SIZE
-    mpl.rcParams['legend.fontsize'] = 8
-    
+    matplotlib.rcParams['legend.fontsize'] = 8
+
     ## CHANGING FONT
-    mpl.rcParams['font.sans-serif'] = "Arial"
-    mpl.rcParams['font.family'] = "sans-serif"
+    matplotlib.rcParams['font.sans-serif'] = "Arial"
+    matplotlib.rcParams['font.family'] = "sans-serif"
     ## DEFINING FONT
-    font = {'size'   : 10}
-    mpl.rc('font', **font)
+    font = {'size': 10}
+    matplotlib.rc('font', **font)
     return
 
 # Function that converts centimeters to inches
