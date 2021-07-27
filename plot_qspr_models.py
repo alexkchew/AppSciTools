@@ -11,11 +11,13 @@ Author: Alex K. Chew (alex.chew@schrodinger.com)
 
 Copyright Schrodinger, LLC. All rights reserved.
 """
-import matplotlib.pyplot as plt
+
 import pandas as pd
 
 # Importing plot tools
 from . import plot_tools
+
+from .plot_tools import plt
 
 # Importing specific plot tolols
 from .plot_tools import STATS_NAME_CONVERSION_DICT
