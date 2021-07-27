@@ -15,7 +15,7 @@ Functions:
         filters dataframe by removing variances <= 0.1
 """
 import pandas as pd
-## IMPORTING VARIANCE THRESHOLD FUNCTION    
+## IMPORTING VARIANCE THRESHOLD FUNCTION
 from sklearn.feature_selection import VarianceThreshold
 
 # Function to filter by variance threshold
