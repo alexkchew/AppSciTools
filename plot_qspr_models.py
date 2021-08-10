@@ -13,6 +13,7 @@ Copyright Schrodinger, LLC. All rights reserved.
 """
 
 import pandas as pd
+import operator
 
 # Importing plot tools
 from . import plot_tools
@@ -225,7 +226,8 @@ def plot_multiple_parity_for_property_as_subplots(plot_specific_models,
                                                   descriptor_key = '2d_and_qm_descriptors',
                                                   figsize = plot_tools.cm2inch(*(24, 12)),
                                                   MAX_STRING_LENGTH = 20,
-                                                  stats_desired = ['r2', 'rmse']):
+                                                  stats_desired = ['r2', 'rmse'],
+                                                  property_label = None):
     """
     This function plots multiple parities as a subplot. 
     
@@ -241,6 +243,9 @@ def plot_multiple_parity_for_property_as_subplots(plot_specific_models,
         figure size in inches
     MAX_STRING_LENGTH: int
         maximum string length to use
+    property_label: str, optional
+        property label to output into the axis. Default value is None, which 
+        would not output any property labels into axis titles
     Returns
     -------
     fig, ax: obj
@@ -281,11 +286,18 @@ def plot_multiple_parity_for_property_as_subplots(plot_specific_models,
         predict_df = prediction_dict['predict_df']
         stats_dict = prediction_dict['stats_dict']
         
+        # Getting x and y label
+        xlabel = 'Actual'
+        ylabel = 'Predicted'
+        if property_label is not None:
+            xlabel = " ".join([xlabel, property_label])
+            ylabel = " ".join([ylabel, property_label])
+        
         # Plotting figure and axis
         fig, ax = plot_tools.plot_parity(predict_df = predict_df,
                                   stats_dict = stats_dict,
-                                  xlabel = "Actual",
-                                  ylabel = "Predicted",
+                                  xlabel = xlabel,
+                                  ylabel = ylabel,
                                   fig = fig,
                                   ax = ax,
                                   want_extensive = True,
@@ -309,3 +321,110 @@ def plot_multiple_parity_for_property_as_subplots(plot_specific_models,
     fig.tight_layout()
     
     return fig, ax
+
+# Function to plot the importance features
+def plot_importance_features(results_df = None,
+                             results_df_sorted = None,
+                             top_n = 3,
+                             fig = None,
+                             ax = None,
+                             fig_size_cm = plot_tools.FIGURE_SIZES_DICT_CM['1_col'],
+                             width = 0.2,
+                             max_string_length = None,
+                             return_sorted_df = False,
+                             color = 'gray',
+                             ):
+    """
+    This function plots the importance features. 
+    
+    Parameters
+    ----------
+    results_df: dataframe
+        dataframe containing avg Shapley values, etc.
+    results_df_sorted: dataframe, optional
+        sorted dataframe. If this is already available, it will overwrite the results_df. 
+        Default value is None.
+    top_n: int, optional
+        top n to plot. The default value is 3. 
+    fig: obj, optional
+        figure object. The default value is None.
+    ax: obj, optional
+        axis object. The default value is None.
+    fig_size_cm: tuple
+        figure size in centimeters. 
+    width: int, optional
+        bar plot width. The default value is 0.2.
+    max_string_length: int, optional
+        max string length for the features. The default value is None.
+        If None, then we will use the entire string. Otherwise, we will 
+        truncate string accordingly.
+    return_sorted_df: logical, optional
+        True if you want to return the sorted dataframe as well.
+    color: str or array, optional
+        color of the bars. Default value is 'gray'. 
+    Returns
+    -------
+    fig: obj
+        figure object. 
+    ax: obj
+        axis object. 
+    results_df_sorted: df, optional
+        dataframe of the sorted results.
+    """
+    # Function to sort results dataframe
+    def sort_results_df(results_df):
+        """
+        This function simply sorts the results dataframe from largest to smallest 
+        in terms of importance.
+        """
+        return results_df.sort_values(by = "Avg_Shap", ascending = False).reset_index(drop=True)
+
+    
+    # Sorting values
+    if results_df_sorted is None:
+        results_df_sorted = sort_results_df(results_df)
+    
+    # Getting values to plot
+    bar_values = results_df_sorted['Avg_Shap_w_Sign'][:top_n]
+    bar_errors = results_df_sorted['Std_Shap'][:top_n]
+    feature_list = results_df_sorted['Feature'][:top_n]
+    
+    if max_string_length is not None:
+        feature_list = [ each_feature[:max_string_length] for each_feature in feature_list]
+    
+    # Generating plot
+    if fig is None or ax is None:
+        fig, ax = plot_tools.create_fig_based_on_cm(fig_size_cm = fig_size_cm)
+    
+    # Plotting horizontal plots
+    ax.barh(feature_list, 
+            bar_values, 
+            width, 
+            xerr = bar_errors,
+            align = 'center',
+            color = color,
+            linestyle = None,
+            fill = True,
+            capsize=3,
+            alpha = 1,
+            linewidth = 1,
+            edgecolor = 'k',
+            error_kw = {'linewidth': 1,
+                        }                
+            )
+    
+    # Reverse axis
+    ax.invert_yaxis()  # labels read top-to-bottom
+    
+    # Tight layout
+    fig.tight_layout()
+    
+    # Drawing line at zero
+    ax.axvline(x = 0, color = 'k')
+    
+    # Adding x label
+    ax.set_xlabel("Importance")
+    if return_sorted_df is True:
+        return fig, ax, results_df_sorted
+    else:
+        return fig, ax

@@ -234,6 +234,7 @@ def plot_parity(predict_df,
                 ax = None,
                 want_extensive = False,
                 stats_desired = None,
+                show_outliers = False,
                 df_act_key = 'y_act',
                 df_pred_key = 'y_pred',
                 ):
@@ -261,6 +262,10 @@ def plot_parity(predict_df,
         actual key for dataframe. The default value is 'y_act'.
     df_pred_key: str, optional
         prediction key for dataframe. The default value is 'y_pred'.
+    show_outliers: logical, optional
+        True if you want to show all outliers. This assumes that you already 
+        run the `detect_outliers_from_df` function and that there is an 
+        'outlier' key. 
     Returns
     -------
     fig, ax: obj
@@ -271,13 +276,68 @@ def plot_parity(predict_df,
     if fig is None or ax is None:
         fig, ax = create_fig_based_on_cm(fig_size_cm = fig_size_cm)
     
-    # Defining x and y 
-    x = predict_df[df_act_key]
-    y = predict_df[df_pred_key]
+    # First check if show outlier is available
+    if show_outliers is True:
+        if 'outlier' not in predict_df:
+            print("Warning, outlier is desired, but no 'outlier' key is available.")
+            print("Make sure to run `detect_outliers_from_df` to compute all outliers.")
+            print("Turning off show outliers to prevent errors.")
+            show_outliers = False
     
-    # Generating plot
-    ax.scatter(x, y, color = 'k')
-    
+    # Seeing if you want outliers
+    if show_outliers is False:
+        # Defining x and y 
+        x = predict_df[df_act_key]
+        y = predict_df[df_pred_key]
+        
+        # Generating plot
+        ax.scatter(x, y, color = 'k')
+        
+    else:
+        # Spltting between values with and without outliers
+        for want_outliers, scatter_color in zip( [False, True],
+                                                 ['k', 'r',]):
+            # Plotting for each
+            logical_for_outlier = predict_df['outlier'] == want_outliers
+            x = predict_df[df_act_key][logical_for_outlier]
+            y = predict_df[df_pred_key][logical_for_outlier]
+
+            # Generating plot
+            ax.scatter(x, y, color = scatter_color)
+            
+            # Adding labels if outliers are desired
+            if want_outliers is True:
+                # Identifying the labels
+                labels = predict_df['label'][logical_for_outlier]
+                
+                texts_list = []
+                
+                # zip joins x and y coordinates in pairs
+                for x_values,y_values,label_values in zip(x,y,labels):
+                
+                    label = "{:s}".format(label_values)
+                    
+                    # Annotating labels
+                    text = plt.annotate(label, # this is the text
+                                        (x_values,y_values), # these are the coordinates to position the label
+                                        textcoords="offset points", # how to position the text
+                                        xytext=(0,10), # distance from text to points (x,y)
+                                        ha='center',
+                                        color = scatter_color) # horizontal alignment can be left, right or center
+                    # Storing
+                    texts_list.append(text)
+#                # Adjusting text
+#                try:
+#                    from adjustText import adjust_text
+#                    adjust_text(texts_list,
+#                                arrowprops=dict(arrowstyle='->', color=scatter_color)
+#                                )
+#                except ImportError:
+#                    print("Skipping text adjustment labels")
+#                    print("If desired, install adjustText:")
+#                    print("--> pip install adjustText")
+#                    pass
+            
     # Adding labels
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
@@ -421,6 +481,11 @@ def plot_histogram(values,
     # Adding text to axis
     if want_total_box is True:
         box_text = "Total = %d"%(n_points)
+        if want_normal_dist is True:
+            box_text = '\n'.join([box_text,
+                                  '$\mu$ = %.2f'%(mu),
+                                  '$\sigma$ = %.2f'%(sigma),
+                                  ])
         ax.text(0.95, 0.95, box_text,
              horizontalalignment='right',
              verticalalignment='top',
