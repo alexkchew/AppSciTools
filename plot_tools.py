@@ -29,7 +29,7 @@ Functions:
 # Importing tools
 import numpy as np
 import matplotlib
-matplotlib.use('Qt5Agg')
+# matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 
 # Importing relative stats
@@ -330,6 +330,8 @@ def plot_histogram(values,
                    ylabel = 'N',
                    xlabel = 'Property',
                    want_total_box = True,
+                   want_normal_dist = False,
+                   normalize = False,
                    fig_size_cm = FIGURE_SIZES_DICT_CM['1_col'],
                    ):
     """
@@ -349,8 +351,12 @@ def plot_histogram(values,
         label of y
     want_total_box: logical, optional
         True if you want the total box in the upper right.
+    want_normal_dist: logical, optional
+        True if you want a normal distribution added onto the plot
     fig_size_cm: tuple
         figure size in cm
+    normalize: logical, optional
+        True if you want to normalize the density
         
     Returns
     -------
@@ -366,13 +372,14 @@ def plot_histogram(values,
         fig, ax = create_fig_based_on_cm(fig_size_cm = fig_size_cm)
     
     # Generating histogram
-    hist = ax.hist(values, 
-                   bins = n_bins, 
-                   color = 'gray', 
-                   edgecolor = 'k')
+    num_hist, bins, patches = ax.hist(values, 
+                                      bins = n_bins, 
+                                      color = 'gray', 
+                                      edgecolor = 'k',
+                                      density = normalize)
     
     # Getting total points
-    n_points = hist[0].sum()
+    n_points = num_hist.sum()
     
     # Adding xlabel
     ax.set_xlabel(xlabel)
@@ -392,7 +399,25 @@ def plot_histogram(values,
     # Setting y limits to match y range
     y_range = y_lims[1] - y_lims[0]
     ax.set_ylim([y_lims[0], y_lims[1] + y_range * .3])
-            
+    
+    # Seeing if you want normal distribution
+    if want_normal_dist is True:
+        from scipy.stats import norm
+        
+        # Getting mean and std
+        (mu, sigma) = norm.fit(values)
+        
+        # Getting area
+        widths = bins[1:] - bins[:-1]
+        area = (widths * num_hist).sum()
+        
+        # Add a 'best fit' line
+        best_fit_y = norm.pdf(bins, mu, sigma)
+        ax.plot(bins,
+                best_fit_y * area,                 
+                color = 'k',
+                linestyle = '--',)
+        
     # Adding text to axis
     if want_total_box is True:
         box_text = "Total = %d"%(n_points)
