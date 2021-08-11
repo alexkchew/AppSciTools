@@ -141,6 +141,7 @@ def create_horizontal_bar(labels,
                           width = 0.5,
                           color ='k',
                           xlabel = "Value",
+                          want_labels = False,
                           fig_size_cm = FIGURE_SIZES_DICT_CM['1_col']):
     """
     This function generates a horizontal bar plot
@@ -157,6 +158,8 @@ def create_horizontal_bar(labels,
         label for the x axis. Default is "Value".
     fig_size_cm : tuple size 2, optional
         Figure size in centimeters. The default is plot_tools.FIGURE_SIZES_DICT_CM['1_col'].
+    want_labels: logical, optional
+        True if you want lavbels
         
     Returns
     -------
@@ -174,6 +177,13 @@ def create_horizontal_bar(labels,
             width, 
             color = color,
             capsize=2, )
+    
+    # Adding labels
+    if want_labels:
+        _, xmax = plt.xlim()
+        plt.xlim(0, xmax+300)
+        for i, v in enumerate(values):
+            ax.text(v + 10, i, str(v), color='black',  fontsize=10, ha='left', va='center')
     
     # Reverse axis
     ax.invert_yaxis()  # labels read top-to-bottom
