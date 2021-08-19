@@ -14,6 +14,7 @@ Copyright Schrodinger, LLC. All rights reserved.
 
 import pandas as pd
 import operator
+import numpy as np
 
 # Importing plot tools
 from . import plot_tools
@@ -81,14 +82,38 @@ def extract_model_errors(storage_descriptor_sets,
             error_storage[each_property][each_model] = error_value
     
     return error_storage
+
+# Function to generate array of rgb colors
+def generate_rgb_colors(n_colors,
+                        colormap = 'hot',
+                        ):
+    """
+    This function generates rgb color array based on inputs. 
     
+    Parameters
+    ----------
+    n_colors: int
+        number of colors that you want
+    colormap: str
+        colormap that is desired
+    Returns
+    -------
+    colors_array: np.array, shape = n_colors, 4
+        colors array from the matplotlib colors
+    
+    """
+    from matplotlib import cm
+    colors_array = getattr(cm, 'hot')(range(n_colors))
+    return colors_array
+
 # Function to plot model prediction for a single property
 def plot_model_comparison(error_storage,
                           property_name,
                           xlabel = 'stat',
                           width = 0.2,
                           fig_size_cm = plot_tools.FIGURE_SIZES_DICT_CM['1_col'],
-                          ascending = None
+                          ascending = None,
+                          colors = None,
                           ):
     """
     This function plots the model performance for a particular statistic as  
@@ -97,8 +122,9 @@ def plot_model_comparison(error_storage,
     
     Parameters
     ----------
-    error_storage: dict
-        dictionary containing error information. 
+    error_storage: pd.dataframe
+        dataframe containing error information. Columns are the different 
+        descriptor keys. 
     property_name: str
         property name that you are interested in
     width: float, optional
@@ -110,6 +136,9 @@ def plot_model_comparison(error_storage,
     ascending: logical, optional
         True if you want to sort models by ascending or decending (True/False).
         The default value is None.
+    colors: list
+        list of colors for each bar plot. If None, then we will generate colors 
+        based on your inputs. 
         
     Returns
     -------
@@ -120,31 +149,69 @@ def plot_model_comparison(error_storage,
     fig, ax = plot_tools.create_fig_based_on_cm(fig_size_cm = fig_size_cm)
     
     # Getting the error dictionary
-    error_for_property = pd.Series(error_storage[property_name])
-    
-    if ascending is not None:
-        error_for_property = error_for_property.sort_values(ascending = ascending)
+    error_for_property = [ pd.Series(error_storage[descriptor_keys][property_name]) for descriptor_keys in error_storage.columns ]
     
     # Getting the model labels
-    x_labels = list(error_for_property.keys())
+    x_labels = list(error_for_property[0].keys())
     
     # Converting x labels if within model
-    x_labels = [ MODEL_NAME_CONVERSION_DICT[each_model] if each_model in MODEL_NAME_CONVERSION_DICT else each_model for each_model in x_labels ]
+    x_labels = np.array([ MODEL_NAME_CONVERSION_DICT[each_model] 
+                         if each_model in MODEL_NAME_CONVERSION_DICT else each_model 
+                         for each_model in x_labels ])
     
-    # Getting y values
-    y = error_for_property.values
-    # [error_for_property[each_model] for each_model in error_for_property.keys()]
+    # Getting indices
+    x_ind = np.arange(len(x_labels))
     
-    # Plotting horizontal plot
-    ax.barh(x_labels,
-            y,
-            color = 'k',
-            )
+    # Generating colors
+    if colors is None:
+        if len(error_for_property) == 1:
+            colors_array = ['k']
+        else:
+            # Changing the color array
+            colors_array = generate_rgb_colors(n_colors = len(error_for_property))
+    else:
+        colors_array = colors[:]
     
+    # Looping through y
+    for idx, (each_error_property, color) in enumerate(zip(error_for_property, colors_array)):
+        
+        # Sorting based on the first property
+        if ascending is not None and idx == 0:
+            # Arg sorting
+            idx_sorted = np.argsort(each_error_property)
+            
+            # Seeing you want ascending
+            if ascending is False:
+                idx_sorted = idx_sorted[::-1]
+                
+            # Re-defining x label based on inputs
+            x_labels = x_labels[idx_sorted]
+        
+        # Getting y values
+        y = np.array(each_error_property.values)[idx_sorted]
+        
+        # Getting label
+        label = error_storage.columns[idx]
+        
+        # Plotting horizontal plot
+        ax.barh(x_ind + width * idx,
+                y,
+                width,
+                color = color,
+                label = label,
+                edgecolor = 'k',
+                linewidth = 0.5,
+                )
+    
+    # Setting y ticks
+    ax.set(yticks= x_ind + width*(len(error_for_property)-1)/2.0, 
+           yticklabels=x_labels, 
+           )
+           # ylim=[2*width - 1, len(error_for_property)]) # 
     # Reverse axis
     ax.invert_yaxis()  # labels read top-to-bottom
     # ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-
+    
     # Setting x axis
     if xlabel in STATS_NAME_CONVERSION_DICT:
         ax.set_xlabel(STATS_NAME_CONVERSION_DICT[xlabel])
@@ -157,6 +224,10 @@ def plot_model_comparison(error_storage,
     # Plotting x = 0 line
     ax.axvline(x = 0 , color = 'k', linewidth = 1)
     
+#    # Adding legend if more than one error is plotted
+#    if len(error_for_property) > 1:
+#        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+#    
     # Tight layout
     fig.tight_layout()
     
@@ -171,6 +242,8 @@ def plot_model_comparison_for_property(storage_descriptor_sets,
                                        width = 0.2,
                                        fig_size_cm = plot_tools.FIGURE_SIZES_DICT_CM['1_col'],
                                        ascending = None,
+                                       colors = None,
+                                       descriptor_dict = None,
                                        ):
     """
     This function plots model comparison for a property. 
@@ -183,8 +256,9 @@ def plot_model_comparison_for_property(storage_descriptor_sets,
         list of models that you have trained the models on.
     property_name: str
         property name that you are interested in
-    descriptor_key: str
-        descriptor key to use
+    descriptor_key: str or list
+        descriptor key to use. If list, then this will generate a bar plot 
+        comparing between multiple descriptor keys. 
     fig_size_cm: tuple, optional
         figure size. The default values are stored within FIGURE_SIZES_DICT_CM.
     width: float, optional
@@ -192,6 +266,10 @@ def plot_model_comparison_for_property(storage_descriptor_sets,
     ascending: logical, optional
         True if you want to sort models by ascending or decending (True/False).
         The default value is None.
+    descriptor_dict: dict
+        dictionary containing information about the descriptors. This way, we 
+        could relate the key to the label. Note that each entry should have a 
+        'label' within the dictionary. 
         
     Returns
     -------
@@ -199,25 +277,47 @@ def plot_model_comparison_for_property(storage_descriptor_sets,
         fig and axis object
     error_storage: dict
         dictionary containig error storage
-    
     """
-    # Getting error storage
-    error_storage = extract_model_errors(storage_descriptor_sets = storage_descriptor_sets,
-                                         model_type_list = model_type_list,
-                                         descriptor_key = descriptor_key,
-                                         stat_var = stat_var,
-                                         )
+    # Storing errors
+    error_storage_list = {}
+    
+    # Seeing if the descriptor key is a list
+    if type(descriptor_key) is not list:
+        # Making this a list
+        descriptor_key = [descriptor_key]
+    
+    # Looping through descriptor keys
+    for each_descriptor_key in descriptor_key:
+        # Getting error storage
+        error_storage = extract_model_errors(storage_descriptor_sets = storage_descriptor_sets,
+                                             model_type_list = model_type_list,
+                                             descriptor_key = each_descriptor_key,
+                                             stat_var = stat_var,
+                                             )
+        
+        # Seeing if dict exists
+        output_descriptor_key = each_descriptor_key
+        if descriptor_dict is not None:
+            if each_descriptor_key in each_descriptor_key:
+                output_descriptor_key = descriptor_dict[each_descriptor_key]['label']
+        
+        # Storing the errors
+        error_storage_list[output_descriptor_key] = error_storage
+        
+    # Creating dataframe
+    error_storage_list = pd.DataFrame(error_storage_list)
     
     # Plotting model comparisons
-    fig, ax = plot_model_comparison(error_storage = error_storage,
+    fig, ax = plot_model_comparison(error_storage = error_storage_list,
                                     property_name = property_name,
                                     xlabel = stat_var,
                                     width = width,
                                     fig_size_cm = fig_size_cm,
                                     ascending = ascending,
+                                    colors = colors,
                                     )
     
-    return fig, ax, error_storage
+    return fig, ax, error_storage_list
 
 # Function to plot specific models in sub plots
 def plot_multiple_parity_for_property_as_subplots(plot_specific_models,
@@ -227,7 +327,10 @@ def plot_multiple_parity_for_property_as_subplots(plot_specific_models,
                                                   figsize = plot_tools.cm2inch(*(24, 12)),
                                                   MAX_STRING_LENGTH = 20,
                                                   stats_desired = ['r2', 'rmse'],
-                                                  property_label = None):
+                                                  property_label = None,
+                                                  fig = None,
+                                                  axs = None,
+                                                  ax_idx = None):
     """
     This function plots multiple parities as a subplot. 
     
@@ -246,6 +349,10 @@ def plot_multiple_parity_for_property_as_subplots(plot_specific_models,
     property_label: str, optional
         property label to output into the axis. Default value is None, which 
         would not output any property labels into axis titles
+    fig, axs: obj
+        figure and axis objects
+    idx_model: [idx]
+        index for the axis object
     Returns
     -------
     fig, ax: obj
@@ -266,12 +373,13 @@ def plot_multiple_parity_for_property_as_subplots(plot_specific_models,
     
     
     """
-    # Defining figure and axis
-    fig, axs = plt.subplots(nrows = 1,
-                            ncols = len(plot_specific_models),
-                            sharey = False,
-                            sharex = False,
-                            figsize = figsize)
+    if fig is None or axs is None:
+        # Defining figure and axis
+        fig, axs = plt.subplots(nrows = 1,
+                                ncols = len(plot_specific_models),
+                                sharey = False,
+                                sharex = False,
+                                figsize = figsize)
     
     # Looping through each model
     for idx_model, each_model in enumerate(plot_specific_models):
@@ -280,6 +388,10 @@ def plot_multiple_parity_for_property_as_subplots(plot_specific_models,
             ax = axs[idx_model]
         except TypeError:
             ax = axs
+        
+        # Changing axis if you inputted that
+        if ax_idx is not None:
+            ax = axs[ax_idx]
         
         # Getting results
         prediction_dict = storage_descriptor_sets[property_name][descriptor_key]['model_storage'][each_model]
@@ -320,7 +432,7 @@ def plot_multiple_parity_for_property_as_subplots(plot_specific_models,
     # Tight layout figure
     fig.tight_layout()
     
-    return fig, ax
+    return fig, axs
 
 # Function to plot the importance features
 def plot_importance_features(results_df = None,
