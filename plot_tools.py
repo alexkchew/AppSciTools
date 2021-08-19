@@ -510,3 +510,44 @@ def plot_histogram(values,
         ax.text(*text_loc, box_text, transform = ax.transAxes, **text_dict)
     
     return fig, ax
+
+# Function to generate array of rgb colors
+def generate_rgb_colors(n_colors,
+                        colormap = 'hot',
+                        ):
+    """
+    This function generates rgb color array based on inputs. 
+    
+    Parameters
+    ----------
+    n_colors: int
+        number of colors that you want
+    colormap: str
+        colormap that is desired
+    Returns
+    -------
+    colors_array: np.array, shape = n_colors, 4
+        colors array from the matplotlib colors
+    
+    """
+    from matplotlib import cm
+    colors_array = getattr(cm, 'hot')(range(n_colors))
+    return colors_array
+
+### FUNCTION TO GET CMAP
+def get_cmap(n, name='hsv'):
+    '''Returns a function that maps each index in 0, 1, ..., n-1 to a distinct 
+    RGB color; the keyword argument name must be a standard mpl colormap name.
+    This function is useful to generate colors between red and purple without having to specify the specific colors
+    USAGE:
+        ## GENERATE CMAP
+        cmap = get_cmap(  len(self_assembly_coord.gold_facet_groups) )
+        ## SPECIFYING THE COLOR WITHIN A FOR LOOP
+        for ...
+            current_group_color = cmap(idx) # colors[idx]
+            run plotting functions
+    '''
+    ## IMPORTING FUNCTIONS
+    import matplotlib.pyplot as plt
+    return plt.cm.get_cmap(name, n + 1)
+
