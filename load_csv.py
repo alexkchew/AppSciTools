@@ -161,7 +161,7 @@ def strip_df_index(df,
     ----------
     df : dataframe
         pandas dataframe containing descriptor information. 
-    col2remove: list]
+    col2remove: list
         list of columns to remove from the dataframe.
     Returns
     -------

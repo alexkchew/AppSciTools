@@ -180,10 +180,11 @@ def create_horizontal_bar(labels,
     
     # Adding labels
     if want_labels:
-        _, xmax = plt.xlim()
-        plt.xlim(0, xmax+300)
+        xmin, xmax = plt.xlim()
+        # Extending the min and max by 10%
+        plt.xlim(0, xmax+ 0.30*(xmax - xmin))
         for i, v in enumerate(values):
-            ax.text(v + 10, i, str(v), color='black',  fontsize=10, ha='left', va='center')
+            ax.text(v + 0.05*(xmax - xmin), i, str(v), color='black',  fontsize=10, ha='left', va='center')
     
     # Reverse axis
     ax.invert_yaxis()  # labels read top-to-bottom
@@ -403,6 +404,12 @@ def plot_histogram(values,
                    want_normal_dist = False,
                    normalize = False,
                    fig_size_cm = FIGURE_SIZES_DICT_CM['1_col'],
+                   text_loc = (0.95, 0.95),
+                   text_dict = dict(
+                       horizontalalignment='right',
+                       verticalalignment='top',
+                       bbox=dict(facecolor='none', edgecolor= 'none', pad=5.0)
+                       ),
                    ):
     """
     This function plots the histogram as a bar plot. 
@@ -427,7 +434,11 @@ def plot_histogram(values,
         figure size in cm
     normalize: logical, optional
         True if you want to normalize the density
-        
+    text_loc: tuple, shape = 2, optional
+        text location for the histogram box text. Default value is (0.95, 0.95)
+    text_dict: dict, optional
+        dictionary for text box
+    
     Returns
     -------
     
@@ -496,10 +507,6 @@ def plot_histogram(values,
                                   '$\mu$ = %.2f'%(mu),
                                   '$\sigma$ = %.2f'%(sigma),
                                   ])
-        ax.text(0.95, 0.95, box_text,
-             horizontalalignment='right',
-             verticalalignment='top',
-             transform = ax.transAxes,
-             bbox=dict(facecolor='none', edgecolor= 'none', pad=5.0))
+        ax.text(*text_loc, box_text, transform = ax.transAxes, **text_dict)
     
     return fig, ax
