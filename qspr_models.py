@@ -419,15 +419,12 @@ def optimize_hyperparams_given_cv(X,
         X array
     y: [np.array]
         y array
-
     estimator: [obj]
         estimator object
     param_grid: dict
         dictionary containing grid to vary
     cv_inputs: dict, optional
         dictionary containing cross validation inputs
-        
-    
         
     Returns
     -------
@@ -438,7 +435,7 @@ def optimize_hyperparams_given_cv(X,
             grid_cv.best_params_: Best parameters
         
     """
-    # Identifying cross validatoin
+    # Identifying cross validation
     cv = RepeatedKFold(**cv_inputs)
 
     # Running cross validation CV

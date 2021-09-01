@@ -197,7 +197,7 @@ def create_horizontal_bar(labels,
     
     return fig, ax
 
-# Function o create a box text based on states desired
+# Function o create a box text based on stats desired
 def generate_box_text(stats_dict, stats_desired):
     """
     This function generates a box string based on the desired stats list.
