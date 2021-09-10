@@ -35,6 +35,9 @@ from sklearn.model_selection import RepeatedKFold, GridSearchCV
 # Importing relative stats
 from .core.stats import get_stats
 
+# Getting stacking regressor
+from sklearn.ensemble import StackingRegressor
+
 # Setting random seed
 np.random.seed(0)
 
@@ -79,7 +82,9 @@ AVAILABLE_MODELS = [
         'baysian_ridge',
         'elastic_net',
         'kernel_ridge',
-        'xgboost',        
+        'xgboost',
+        'stacked_LGBM_RF_GBR',
+        'stacked_LGBM_RF',
         ]
 
 # Function to generate model based on type
@@ -172,9 +177,58 @@ def generate_model_based_on_type(model_type):
         from xgboost.sklearn import XGBRegressor
         model = XGBRegressor()
     
+    # Getting model types
+    elif model_type == 'stacked_LGBM_RF_GBR':
+        # Generating stacked regressor
+        model = generate_stacked_regressor(model_strings = ['gradient_boost_regression', 
+                                                            'lightgbm', 
+                                                            'RF' ],
+                                           final_estimator_string = 'linear')
+        
+    # Getting model types
+    elif model_type == 'stacked_LGBM_RF':
+        # Generating stacked regressor
+        model = generate_stacked_regressor(model_strings = [
+                                                            'lightgbm', 
+                                                            'RF' ],
+                                           final_estimator_string = 'linear')
+
+    
     else:
         print("Error! Model type (%s) not found!"%(model_type))
     return model
+
+# Function to generate stacked mode
+def generate_stacked_regressor(model_strings,
+                               final_estimator_string = 'linear'):
+    """
+    This function generates stacked regressor given model strings.
+    
+    Parameters
+    ----------
+    model_strings: list
+        List of model strings for the regressor.
+    final_estimator_string: str, optional
+        Final estimate to place at the end. Default value is 'linear'. 
+    
+    Returns
+    -------
+    model: obj
+        model object
+    
+    """
+    # Getting tuple
+    estimators = [ (each_model, generate_model_based_on_type(each_model) ) for each_model in model_strings]
+    # Getting final estimator
+    final_estimators = generate_model_based_on_type('linear')
+    
+    # Outputting the model
+    model = StackingRegressor(estimators=estimators, 
+                              final_estimator=final_estimators)
+    
+    
+    return model
+
 
 
 # Function to convert dataframe values
@@ -284,7 +338,8 @@ def split_dataset_KFolds(X,
 def predict_for_KFolds(model_type,
                        fold_list,
                        model_input = None,
-                       return_models = False):
+                       return_models = False,
+                       return_train_test_dfs = False,):
     """
     This function predicts using K-folds.
 
@@ -298,6 +353,9 @@ def predict_for_KFolds(model_type,
     
     return_models: logical, optional
         True if you want to return the models for each fold. Default is False.
+    return_train_test_dfs: logical, optional
+        True if you want to return training and test set dataframes for each 
+        fold. Default is False. 
     Returns
     -------
     predict_df: df
@@ -311,6 +369,10 @@ def predict_for_KFolds(model_type,
     if return_models is True:
         model_list = []
     
+    # Storing predictions for each fold
+    if return_train_test_dfs is True:
+        train_test_dfs = []
+    
     # Looping through each
     for train_test_dict in fold_list:
         # Creating a new model
@@ -323,7 +385,8 @@ def predict_for_KFolds(model_type,
         model.fit(train_test_dict['X_train'],
                   train_test_dict['y_train'])
         
-        # Predicting test set
+        
+        # Predicting the test set
         yhat = model.predict(train_test_dict['X_test'])
         
         # Checking if the prediction is a shape (N, 1)
@@ -332,24 +395,53 @@ def predict_for_KFolds(model_type,
             yhat = yhat[:,0]
         
         # Creating dataframe
-        df = pd.DataFrame(np.array([yhat, train_test_dict['y_test'], train_test_dict['labels_test']]).T,
+        df_test = pd.DataFrame(np.array([yhat, train_test_dict['y_test'], train_test_dict['labels_test']]).T,
                           columns = ['y_pred', 'y_act', 'label']
                           )
         
         # Storing dataframes
-        predict_df.append(df)
+        predict_df.append(df_test)
         
         # Storing model
         if return_models is True:
             model_list.append(copy.deepcopy(model))
+            
+        # Predicting the training set
+        if return_train_test_dfs is True:
+            # Predicting the training set
+            y_pred_train = model.predict(train_test_dict['X_train'])
+            # Dealing with broadcasting issues
+            y_pred_train = np.squeeze(y_pred_train)
+            
+            # Creating dataframe
+            df_train = pd.DataFrame(np.array([y_pred_train, train_test_dict['y_train'], train_test_dict['labels_train']]).T,
+                                    columns = ['y_pred', 'y_act', 'label']
+                                    )
+            # Adding to the list
+            train_test_dfs.append({
+                    'train_df': df_train,
+                    'test_df': df_test,
+                    })
+            
         
-    # Concat for all
+    # Concat for all test set dataframes
     predict_df = pd.concat(predict_df, axis = 0)
         
+    # Getting output tuple
+    output_list = [predict_df]
+    
     if return_models is True:
-        return predict_df, model_list
-    else:
-        return predict_df
+        output_list.append(model_list)
+    
+    if return_train_test_dfs is True:
+        output_list.append(train_test_dfs)
+    
+    return tuple(output_list)
+    
+#    if return_models is True:
+#        return predict_df, model_list
+#    else:
+#        return predict_df
 
 # Function to strip title and etc to get numerical descriptors only
 def strip_df_index(df,
@@ -707,10 +799,11 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
 
                 
                 # Generating prediction dataframe
-                predict_df, model_list = predict_for_KFolds(model_type = model_type,
-                                                            fold_list = fold_list,
-                                                            model_input = best_model,
-                                                            return_models = True)
+                predict_df, model_list, train_test_dfs = predict_for_KFolds(model_type = model_type,
+                                                                            fold_list = fold_list,
+                                                                            model_input = best_model,
+                                                                            return_models = True,
+                                                                            return_train_test_dfs = True,)
                 
                 # Getting the statistics
                 stats_dict = get_stats(predict_df)
@@ -721,6 +814,7 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
                     'model_list': model_list,
                     'stats_dict': stats_dict,
                     'grid_cv': grid_cv,
+                    'train_test_dfs': train_test_dfs,
                     }
             
             ######################################################################

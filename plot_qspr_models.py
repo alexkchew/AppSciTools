@@ -361,8 +361,6 @@ def plot_multiple_parity_for_property_as_subplots(plot_specific_models,
         
     Examples
     -------
-    
-    
     fig, ax = plot_qspr_models.plot_multiple_parity_for_property_as_subplots(storage_descriptor_sets = storage_descriptor_sets,
                                                                              plot_specific_models = plot_specific_models,
                                                                              property_name = 'Experimental E(S1T1)',
@@ -412,7 +410,7 @@ def plot_multiple_parity_for_property_as_subplots(plot_specific_models,
                                   ylabel = ylabel,
                                   fig = fig,
                                   ax = ax,
-                                  want_extensive = True,
+                                  want_extensive = False,
                                   stats_desired = stats_desired
                                   )
         # Getting title

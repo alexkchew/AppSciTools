@@ -197,7 +197,8 @@ def create_horizontal_bar(labels,
     return fig, ax
 
 # Function o create a box text based on states desired
-def generate_box_text(stats_dict, stats_desired):
+def generate_box_text(stats_dict, stats_desired,
+                      prefix = ''):
     """
     This function generates a box string based on the desired stats list.
     
@@ -207,6 +208,8 @@ def generate_box_text(stats_dict, stats_desired):
         dictionary of statistics
     stats_desired: list
         list of statistics
+    prefix: str, optional
+        prefix for the box text. Default value is ''
             
     Returns
     -------
@@ -225,7 +228,7 @@ def generate_box_text(stats_dict, stats_desired):
             else:
                 initial_string = each_stat
             # Getting string
-            input_str = "%s = %.2f"%(initial_string, stats_dict[each_stat])
+            input_str = "%s%s = %.2f"%(prefix, initial_string, stats_dict[each_stat])
             # Adding \n if we still need to add a new line
             if stat_idx != len(stats_desired) - 1:
                 input_str += "\n"
@@ -247,6 +250,9 @@ def plot_parity(predict_df,
                 show_outliers = False,
                 df_act_key = 'y_act',
                 df_pred_key = 'y_pred',
+                color = 'k',
+                deviations = None,
+                test_set_colors = 'r',
                 ):
     """
     This function plots the parity given a prediction dataframe with 'y_pred' and 'y_act'
@@ -254,7 +260,9 @@ def plot_parity(predict_df,
     Parameters
     ----------
     predict_df : dataframe
-        Prediction dataframe containing 'y_act' and 'y_pred'
+        Prediction dataframe containing 'y_act' and 'y_pred'. If this dataframe 
+        has a column called 'set', then it will divide the training and test 
+        sets, then plot them accordingly. 
     fig_size_cm: tuple
         figure size in cm
     stats_dict: dict, optional
@@ -276,6 +284,13 @@ def plot_parity(predict_df,
         True if you want to show all outliers. This assumes that you already 
         run the `detect_outliers_from_df` function and that there is an 
         'outlier' key. 
+    color: str or list, optional
+        color for the scatter plot. The default value is 'k' (or black).
+    deviations: float, optional
+        deviations from the y=x line. If None, this line won't be drawn. Otherwise, 
+        we will draw a line above and below the y=x line. 
+    test_set_colors: str, optional
+        Test set colors. Default colors is 'k' (or black). 
     Returns
     -------
     fig, ax: obj
@@ -294,72 +309,95 @@ def plot_parity(predict_df,
             print("Turning off show outliers to prevent errors.")
             show_outliers = False
     
-    # Seeing if you want outliers
-    if show_outliers is False:
-        # Defining x and y 
-        x = predict_df[df_act_key]
-        y = predict_df[df_pred_key]
+    # getting tempty trianing and testing dataframe
+    train_df, test_df = None, None
+    
+    # Getting the set of training and testing
+    if 'set' in predict_df.columns:
+        # Getting training and test set datafrmaes
+        train_df = predict_df[predict_df['set'] == 'train'].copy()
+        test_df = predict_df[predict_df['set'] == 'test'].copy()
         
-        # Generating plot
-        ax.scatter(x, y, color = 'k')
+        # Plotting the scatter for training and testing
+        ax.scatter(train_df[df_act_key], 
+                   train_df[df_pred_key],
+                   color = color,
+                   label = 'Train set',
+                   zorder = 1)
+        ax.scatter(test_df[df_act_key], 
+                   test_df[df_pred_key],
+                   color = test_set_colors,
+                   label = 'Test set',
+                   zorder = 2)        
         
     else:
-        # Spltting between values with and without outliers
-        for want_outliers, scatter_color in zip( [False, True],
-                                                 ['k', 'r',]):
-            # Plotting for each
-            logical_for_outlier = predict_df['outlier'] == want_outliers
-            x = predict_df[df_act_key][logical_for_outlier]
-            y = predict_df[df_pred_key][logical_for_outlier]
-
-            # Generating plot
-            ax.scatter(x, y, color = scatter_color)
+        
+        # Seeing if you want outliers
+        if show_outliers is False:
+            # Defining x and y 
+            x = predict_df[df_act_key]
+            y = predict_df[df_pred_key]
             
-            # Adding labels if outliers are desired
-            if want_outliers is True:
-                # Identifying the labels
-                labels = predict_df['label'][logical_for_outlier]
+            # Generating plot
+            ax.scatter(x, y, color = color)
+            
+        else:
+            # Spltting between values with and without outliers
+            for want_outliers, scatter_color in zip( [False, True],
+                                                     ['k', 'r',]):
+                # Plotting for each
+                logical_for_outlier = predict_df['outlier'] == want_outliers
+                x = predict_df[df_act_key][logical_for_outlier]
+                y = predict_df[df_pred_key][logical_for_outlier]
+    
+                # Generating plot
+                ax.scatter(x, y, color = scatter_color)
                 
-                texts_list = []
-                
-                # zip joins x and y coordinates in pairs
-                for x_values,y_values,label_values in zip(x,y,labels):
-                
-                    label = "{:s}".format(label_values)
+                # Adding labels if outliers are desired
+                if want_outliers is True:
+                    # Identifying the labels
+                    labels = predict_df['label'][logical_for_outlier]
                     
-                    # Annotating labels
-                    text = plt.annotate(label, # this is the text
-                                        (x_values,y_values), # these are the coordinates to position the label
-                                        textcoords="offset points", # how to position the text
-                                        xytext=(0,10), # distance from text to points (x,y)
-                                        ha='center',
-                                        color = scatter_color) # horizontal alignment can be left, right or center
-                    # Storing
-                    texts_list.append(text)
-#                # Adjusting text
-#                try:
-#                    from adjustText import adjust_text
-#                    adjust_text(texts_list,
-#                                arrowprops=dict(arrowstyle='->', color=scatter_color)
-#                                )
-#                except ImportError:
-#                    print("Skipping text adjustment labels")
-#                    print("If desired, install adjustText:")
-#                    print("--> pip install adjustText")
-#                    pass
+                    texts_list = []
+                    
+                    # zip joins x and y coordinates in pairs
+                    for x_values,y_values,label_values in zip(x,y,labels):
+                    
+                        label = "{:s}".format(label_values)
+                        
+                        # Annotating labels
+                        text = plt.annotate(label, # this is the text
+                                            (x_values,y_values), # these are the coordinates to position the label
+                                            textcoords="offset points", # how to position the text
+                                            xytext=(0,10), # distance from text to points (x,y)
+                                            ha='center',
+                                            color = scatter_color) # horizontal alignment can be left, right or center
+                        # Storing
+                        texts_list.append(text)
             
     # Adding labels
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     
     # Drawing y = x line
-    lims = [
+    lims = np.array([
         np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
         np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes
-    ]
+    ])
     
     ax.plot(lims, lims, 'r-', alpha=0.5, zorder=0)
     ax.set_aspect('equal')
+    
+    # Plotting the deviations
+    if deviations is not None:
+        deviations_dict = {
+                'linestyle': '--',
+                'alpha': 0.5,
+                'zorder': 0,
+                'color': 'r',
+                }
+        ax.plot(lims, lims + deviations, **deviations_dict)
+        ax.plot(lims, lims - deviations, **deviations_dict)
     
     # Generating statistics and including it in the bottom right corner
     if stats_dict is None:
@@ -367,25 +405,75 @@ def plot_parity(predict_df,
         stats_dict = get_stats(predict_df = predict_df,
                                df_act_key = df_act_key,
                                df_pred_key = df_pred_key)
+        
+    if train_df is not None:
+        # Generating stats for training set
+        train_stats_dict = get_stats(predict_df = train_df,
+                                     df_act_key = df_act_key,
+                                     df_pred_key = df_pred_key)
+        
+    if test_df is not None:
+        # Generating stats for training set
+        test_stats_dict = get_stats(predict_df = test_df,
+                                    df_act_key = df_act_key,
+                                    df_pred_key = df_pred_key)
+        
     
     # Including into the plot
-    if want_extensive is False:
-        box_text = "R$^2$ = %.2f"%(stats_dict['r2'])
-    else:
+    # Depreciated arguments
+    if want_extensive is True:
+        print("Warning, extensive argument is depreciated!")
+        print("Use 'stats_desired' instead!")
         box_text = "R$^2$ = %.2f\nRMSE = %.2f"%(stats_dict['r2'],
                                                 stats_dict['rmse'],
                                                 )
     # Getting stats desired
     if stats_desired is not None:
+        if train_df is not None or test_df is not None:
+            overall_prefix = 'Overall '
+        else:
+            overall_prefix = ''
         # Changing box text
-        box_text = generate_box_text(stats_dict, stats_desired)
+        box_text = generate_box_text(stats_dict, 
+                                     stats_desired,
+                                     prefix = overall_prefix)
+        
+        # Getting box text
+        box_text_list = [box_text]
+        
+        # Getting training and testing information
+        if train_df is not None:
+            # Changing box text
+            train_box_text = generate_box_text(train_stats_dict, 
+                                               stats_desired,
+                                               prefix = 'Train ')
+            box_text_list.append(train_box_text)
+        
+        if test_df is not None:
+            # Adding test box text
+            test_box_text = generate_box_text(test_stats_dict, 
+                                              stats_desired,
+                                              prefix = 'Test ')
+            box_text_list.append(test_box_text)
+        # Creating box text string
+        box_test_string = '\n'.join(box_text_list)
+    else:
+        box_test_string = None
     
     # Adding text to axis
-    ax.text(0.95, 0.05, box_text,
-         horizontalalignment='right',
-         verticalalignment='bottom',
-         transform = ax.transAxes,
-         bbox=dict(facecolor='none', edgecolor= 'none', pad=5.0))
+    if box_test_string is not None:
+        ax.text(0.95, 0.05, box_test_string,
+             horizontalalignment='right',
+             verticalalignment='bottom',
+             transform = ax.transAxes,
+             bbox=dict(facecolor='none', edgecolor= 'none', pad=5.0))
+    
+    # Adding legend
+    if train_df is not None or test_df is not None:
+        leg = ax.legend(loc='upper left')
+        leg.get_frame().set_edgecolor('k')
+#        leg.get_frame().set_linewidth(0.0)
+        
     
     # Tight layout
     fig.tight_layout()
