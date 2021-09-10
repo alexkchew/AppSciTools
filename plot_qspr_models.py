@@ -83,28 +83,7 @@ def extract_model_errors(storage_descriptor_sets,
     
     return error_storage
 
-# Function to generate array of rgb colors
-def generate_rgb_colors(n_colors,
-                        colormap = 'hot',
-                        ):
-    """
-    This function generates rgb color array based on inputs. 
-    
-    Parameters
-    ----------
-    n_colors: int
-        number of colors that you want
-    colormap: str
-        colormap that is desired
-    Returns
-    -------
-    colors_array: np.array, shape = n_colors, 4
-        colors array from the matplotlib colors
-    
-    """
-    from matplotlib import cm
-    colors_array = getattr(cm, 'hot')(range(n_colors))
-    return colors_array
+
 
 # Function to plot model prediction for a single property
 def plot_model_comparison(error_storage,
@@ -168,7 +147,7 @@ def plot_model_comparison(error_storage,
             colors_array = ['k']
         else:
             # Changing the color array
-            colors_array = generate_rgb_colors(n_colors = len(error_for_property))
+            colors_array = plot_tools.generate_rgb_colors(n_colors = len(error_for_property))
     else:
         colors_array = colors[:]
     

@@ -180,10 +180,11 @@ def create_horizontal_bar(labels,
     
     # Adding labels
     if want_labels:
-        _, xmax = plt.xlim()
-        plt.xlim(0, xmax+300)
+        xmin, xmax = plt.xlim()
+        # Extending the min and max by 10%
+        plt.xlim(0, xmax+ 0.30*(xmax - xmin))
         for i, v in enumerate(values):
-            ax.text(v + 10, i, str(v), color='black',  fontsize=10, ha='left', va='center')
+            ax.text(v + 0.05*(xmax - xmin), i, str(v), color='black',  fontsize=10, ha='left', va='center')
     
     # Reverse axis
     ax.invert_yaxis()  # labels read top-to-bottom
@@ -196,7 +197,7 @@ def create_horizontal_bar(labels,
     
     return fig, ax
 
-# Function o create a box text based on states desired
+# Function to create a box text based on states desired
 def generate_box_text(stats_dict, stats_desired,
                       prefix = ''):
     """
@@ -491,6 +492,12 @@ def plot_histogram(values,
                    want_normal_dist = False,
                    normalize = False,
                    fig_size_cm = FIGURE_SIZES_DICT_CM['1_col'],
+                   text_loc = (0.95, 0.95),
+                   text_dict = dict(
+                       horizontalalignment='right',
+                       verticalalignment='top',
+                       bbox=dict(facecolor='none', edgecolor= 'none', pad=5.0)
+                       ),
                    ):
     """
     This function plots the histogram as a bar plot. 
@@ -515,7 +522,11 @@ def plot_histogram(values,
         figure size in cm
     normalize: logical, optional
         True if you want to normalize the density
-        
+    text_loc: tuple, shape = 2, optional
+        text location for the histogram box text. Default value is (0.95, 0.95)
+    text_dict: dict, optional
+        dictionary for text box
+    
     Returns
     -------
     
@@ -584,10 +595,47 @@ def plot_histogram(values,
                                   '$\mu$ = %.2f'%(mu),
                                   '$\sigma$ = %.2f'%(sigma),
                                   ])
-        ax.text(0.95, 0.95, box_text,
-             horizontalalignment='right',
-             verticalalignment='top',
-             transform = ax.transAxes,
-             bbox=dict(facecolor='none', edgecolor= 'none', pad=5.0))
+        ax.text(*text_loc, box_text, transform = ax.transAxes, **text_dict)
     
     return fig, ax
+
+# Function to generate array of rgb colors
+def generate_rgb_colors(n_colors,
+                        colormap = 'hot',
+                        ):
+    """
+    This function generates rgb color array based on inputs. 
+    
+    Parameters
+    ----------
+    n_colors: int
+        number of colors that you want
+    colormap: str
+        colormap that is desired
+    Returns
+    -------
+    colors_array: np.array, shape = n_colors, 4
+        colors array from the matplotlib colors
+    
+    """
+    from matplotlib import cm
+    colors_array = getattr(cm, 'hot')(range(n_colors))
+    return colors_array
+
+### FUNCTION TO GET CMAP
+def get_cmap(n, name='hsv'):
+    '''Returns a function that maps each index in 0, 1, ..., n-1 to a distinct 
+    RGB color; the keyword argument name must be a standard mpl colormap name.
+    This function is useful to generate colors between red and purple without having to specify the specific colors
+    USAGE:
+        ## GENERATE CMAP
+        cmap = get_cmap(  len(self_assembly_coord.gold_facet_groups) )
+        ## SPECIFYING THE COLOR WITHIN A FOR LOOP
+        for ...
+            current_group_color = cmap(idx) # colors[idx]
+            run plotting functions
+    '''
+    ## IMPORTING FUNCTIONS
+    import matplotlib.pyplot as plt
+    return plt.cm.get_cmap(name, n + 1)
+

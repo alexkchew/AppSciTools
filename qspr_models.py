@@ -21,7 +21,7 @@ from scipy import stats
 from sklearn.model_selection import KFold
 
 # Importing load functions
-from .load_csv import load_multiple_descriptor_data, load_property_data
+from .load_csv import load_multiple_descriptor_data, load_property_data, strip_df_index
 
 # Standardization procedures (maybe not necessary)
 from sklearn.preprocessing import StandardScaler
@@ -443,29 +443,6 @@ def predict_for_KFolds(model_type,
 #    else:
 #        return predict_df
 
-# Function to strip title and etc to get numerical descriptors only
-def strip_df_index(df,
-                   col2remove = DEFAULT_INDEX_COLS):
-    """
-    This function strips the dataframe from the index information. 
-
-    Parameters
-    ----------
-    df : dataframe
-        pandas dataframe containing descriptor information. 
-    col2remove: list]
-        list of columns to remove from the dataframe.
-    Returns
-    -------
-    df_clean: dataframe]
-        pandas dataframe without any "Title" or index information
-    """
-    # Dropping the columns
-    df_clean = df.drop(columns = col2remove,
-                       errors='ignore')
-    
-    return df_clean
-
 # Function to generate X_df from descriptor list
 def generate_X_df_from_descriptor_list(descriptor_list,
                                        default_csv_paths,
@@ -534,15 +511,12 @@ def optimize_hyperparams_given_cv(X,
         X array
     y: [np.array]
         y array
-
     estimator: [obj]
         estimator object
     param_grid: dict
         dictionary containing grid to vary
     cv_inputs: dict, optional
         dictionary containing cross validation inputs
-        
-    
         
     Returns
     -------
@@ -553,7 +527,7 @@ def optimize_hyperparams_given_cv(X,
             grid_cv.best_params_: Best parameters
         
     """
-    # Identifying cross validatoin
+    # Identifying cross validation
     cv = RepeatedKFold(**cv_inputs)
 
     # Running cross validation CV
