@@ -620,7 +620,9 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
                                  model_type_list = ['RF'],
                                  property_conversion = [],
                                  hyperparam_tuning = False,
-                                 remove_des_corr_float = None):
+                                 remove_des_corr_float = None,
+                                 dict_for_dataframe_generation = {}
+                                 ):
     """
     This function runs QSPR models and outputs prediction accuracies using 
     K-fold cross validation. Note! We are assuming that the columns in X and 
@@ -674,7 +676,8 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
             # Generating combined dataframe
             X_df = generate_X_df_from_descriptor_list(descriptor_list = descriptor_list,
                                                       default_csv_paths = default_csv_paths,
-                                                      col2remove = default_index_cols,)
+                                                      col2remove = default_index_cols,
+                                                      **dict_for_dataframe_generation)
             
             # Storing orig dataframe ( before any transformations, which is useful 
             # for debugging purposes ). 

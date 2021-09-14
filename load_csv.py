@@ -15,7 +15,7 @@ Copyright Schrodinger, LLC. All rights reserved.
 # Loading modules
 import os
 import pandas as pd
-import glob
+import numpy as np
 
 # Importing filtration tools
 from .filtration import filter_by_variance_threshold
@@ -55,6 +55,7 @@ def load_descriptor_data(csv_path,
                          clean_data = True,
                          filter_by_variance = True,
                          output_filtered_data = False,
+                         na_filter = 'remove',
                          default_index_cols = DEFAULT_INDEX_COLS):
     """
     This function loads the descriptor information. Note that all:
@@ -72,6 +73,14 @@ def load_descriptor_data(csv_path,
         The default value is False.
     filter_by_variance: logical, optional
         True if you want to filter by variance. By default, this is True.
+    na_filter: str, optional
+        Method of dealing with non-existing numbers. The different methods 
+        are summarized below:
+            'remove': (default)
+                Remove all columns that have non-existing numbers.
+            'fill_with_zeros':
+                Fill all nans with zeros. It will also look for infinities and replace them 
+                with zeros. 
 
     Returns
     -------
@@ -82,12 +91,26 @@ def load_descriptor_data(csv_path,
     # Loading csv file
     csv_df = pd.read_csv(csv_path)
     
+    # Printing
+    print("\nLoading CSV file: %s"%(csv_path))
+    
     # Checking if you want to clean the dataframe
     if clean_data is True:
         
         # Cleaning the dataframe
-        csv_df_nonan = csv_df.dropna(axis=1) # Removes NaN values
-        csv_df_nums = csv_df_nonan.select_dtypes(['number']) # Numbers only stored
+        if na_filter == 'remove':
+            print("Removing all columns with nan's")
+            csv_df_nonan = csv_df.dropna(axis=1) # Removes NaN values
+        elif na_filter == 'fill_with_zeros':
+            print("Filling nan's with zeros")
+            csv_df_nonan = csv_df.fillna(0)
+            csv_df_nonan.replace([np.inf, -np.inf], 0)
+            
+        else:
+            print("Error! na_filter of %s is not defined!"%(na_filter))
+        
+        # Selecting only portions of the dataframe with numbers.
+        csv_df_nums = csv_df_nonan.select_dtypes(['number']) # 
         
         try:
         
