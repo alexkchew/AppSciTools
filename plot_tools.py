@@ -103,10 +103,15 @@ def store_figure(fig,
     OUTPUTS:
         void
     '''
+    fig_extension_with_period = '.' + fig_extension
     ## STORING FIGURE
     if save_fig is True:
         ## DEFINING FIGURE NAME
-        fig_name =  path + '.' + fig_extension
+        ext = os.path.splitext(path)[1]
+        if ext != fig_extension_with_period:
+            fig_name =  path + fig_extension_with_period
+        else:
+            fig_name = path
         print("Printing figure: %s"%(fig_name) )
         fig.savefig( fig_name, 
                      format=fig_extension, 
