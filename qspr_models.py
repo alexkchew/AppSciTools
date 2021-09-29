@@ -627,6 +627,10 @@ def main_generate_qspr_models_CV(descriptor_keys_to_use,
     This function runs QSPR models and outputs prediction accuracies using 
     K-fold cross validation. Note! We are assuming that the columns in X and 
     y data are in the same order. We may need to double-check this in the future.
+    
+    In addition, may need to change this code based on normalization. Currently,
+    normalizing with all the data - but for cross validation, we may need to 
+    normalize per training / test set basis. 
 
     Parameters
     ----------

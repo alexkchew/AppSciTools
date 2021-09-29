@@ -26,6 +26,7 @@ Functions:
     create_fig_based_on_cm:
         creates figures based on centimer sizes
 """
+import os
 # Importing tools
 import numpy as np
 import matplotlib
